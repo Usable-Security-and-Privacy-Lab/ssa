@@ -276,6 +276,7 @@ int tls_common_getsockopt(tls_sock_data_t* sock_data, struct socket *sock, int l
 	case TLS_REQUEST_PEER_AUTH:
 	case TLS_PEER_CERTIFICATE_CHAIN:
     case TLS_TRUSTED_CIPHERS:
+    case TLS_ERROR:
 		send_getsockopt_notification((unsigned long)sock_data->key, level, optname, sock_data->daemon_id);
 		if (wait_for_completion_timeout(&sock_data->sock_event, RESPONSE_TIMEOUT) == 0) {
 			/* Let's lie to the application if the daemon isn't responding */
