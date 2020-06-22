@@ -24,7 +24,10 @@
 #define TLS_TRUSTED_CIPHERS               97
 #define TLS_CLIENT_CONNECTION             98
 #define TLS_SERVER_CONNECTION             99
-
+/* added by Devin */
+#define TLS_ERROR                         100
+#define TLS_NEGOTIATED_CIPHER             101
+#define TLS_ENABLE_CIPHER                 102
 
 /* TCP options */
 #define TCP_UPGRADE_TLS         33
@@ -44,4 +47,3 @@ struct sockaddr_host {
 
 
 #endif
-
