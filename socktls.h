@@ -22,8 +22,7 @@
 
 /* added by Nathaniel */
 #define TLS_TRUSTED_CIPHERS               97
-#define TLS_CLIENT_CONNECTION             98
-#define TLS_SERVER_CONNECTION             99
+#define TLS_CHOSEN_CIPHER                 98
 #define TLS_ERROR                        100
 
 /* TCP options */
