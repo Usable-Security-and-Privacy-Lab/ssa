@@ -51,7 +51,7 @@ static const struct nla_policy ssa_nl_policy[SSA_NL_A_MAX + 1] = {
 	},
 	[SSA_NL_A_OPTNAME] = {
 		.type = NLA_U32,
-		.len = USHIRT_MAX, /* TODO: should this be more strict? */
+		.len = USHRT_MAX, /* TODO: should this be more strict? */
 		.validation_type = NLA_VALIDATE_NONE,
 	},
 	[SSA_NL_A_OPTVAL] = {
