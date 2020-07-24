@@ -26,7 +26,7 @@
 #define TLS_SERVER_CONNECTION             99
 /* added by Devin */
 #define TLS_ERROR                         100
-#define TLS_NEGOTIATED_CIPHER             101
+#define TLS_CHOSEN_CIPHER                 101
 #define TLS_ENABLE_CIPHER                 102
 
 /* TCP options */

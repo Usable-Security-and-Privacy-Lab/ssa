@@ -204,8 +204,8 @@ int tls_common_setsockopt(tls_sock_data_t* sock_data, struct socket *sock, int l
 	case TLS_ALPN:
 	case TLS_SESSION_TTL:
 	case TLS_DISABLE_CIPHER:
-	case TLS_ERROR: //CHANGED
-	case TLS_NEGOTIATED_CIPHER: //CHANGED
+	case TLS_ERROR:
+	case TLS_CHOSEN_CIPHER: //CHANGED
 	case TLS_ENABLE_CIPHER: //CHANGED
 	case TLS_PEER_IDENTITY:
     case TLS_TRUSTED_CIPHERS:
@@ -275,9 +275,8 @@ int tls_common_getsockopt(tls_sock_data_t* sock_data, struct socket *sock, int l
 	case TLS_ALPN:
 	case TLS_SESSION_TTL:
 	case TLS_DISABLE_CIPHER:
-	case TLS_ERROR:
-	case TLS_ENABLE_CIPHER: //CHANGED
-	case TLS_NEGOTIATED_CIPHER: //CHANGED
+	case TLS_ENABLE_CIPHER:
+	case TLS_CHOSEN_CIPHER: //CHANGED
 	case TLS_PEER_IDENTITY:
 	case TLS_REQUEST_PEER_AUTH:
 	case TLS_PEER_CERTIFICATE_CHAIN:
