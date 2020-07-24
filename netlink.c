@@ -21,8 +21,8 @@ static const struct nla_policy ssa_nl_policy[SSA_NL_A_MAX + 1] = {
 		.type = NLA_U32,
 		.len = 0,
 		.validation_type = NLA_VALIDATE_RANGE,
-        .min = 0,
-        .max = 1,
+	.min = 0,
+	.max = 1,
 	},
 	[SSA_NL_A_COMM] = {
 		.type = NLA_NUL_STRING,

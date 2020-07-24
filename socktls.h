@@ -13,8 +13,8 @@
 #define TLS_ALPN                          90
 #define TLS_SESSION_TTL                   91
 #define TLS_DISABLE_CIPHER                92
-#define TLS_PEER_IDENTITY		          93
-#define TLS_REQUEST_PEER_AUTH		      94
+#define TLS_PEER_IDENTITY		  93
+#define TLS_REQUEST_PEER_AUTH		  94
 
 /* Internal use only */
 #define TLS_PEER_CERTIFICATE_CHAIN        95
@@ -24,10 +24,19 @@
 #define TLS_TRUSTED_CIPHERS               97
 #define TLS_CLIENT_CONNECTION             98
 #define TLS_SERVER_CONNECTION             99
+<<<<<<< HEAD
 /* added by Devin */
 #define TLS_ERROR                         100
 #define TLS_CHOSEN_CIPHER                 101
 #define TLS_ENABLE_CIPHER                 102
+=======
+#define TLS_ERROR			 100
+
+/* TLS versions */
+#define TLS_VERSION_MIN			 102
+#define TLS_VERSION_MAX			 103
+#define TLS_VERSION_CONN		 104
+>>>>>>> 943b4de449d47053962288d8e4810875008fc199
 
 /* TCP options */
 #define TCP_UPGRADE_TLS         33
