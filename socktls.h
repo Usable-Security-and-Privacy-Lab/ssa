@@ -24,18 +24,17 @@
 #define TLS_TRUSTED_CIPHERS               97
 #define TLS_CLIENT_CONNECTION             98
 #define TLS_SERVER_CONNECTION             99
-<<<<<<< HEAD
-/* added by Devin */
-#define TLS_ERROR                         100
-#define TLS_CHOSEN_CIPHER                 101
-#define TLS_ENABLE_CIPHER                 102
-=======
+
 #define TLS_ERROR			 100
 
 /* TLS versions */
 #define TLS_VERSION_MIN			 102
 #define TLS_VERSION_MAX			 103
 #define TLS_VERSION_CONN		 104
+
+/* Cipher Options */
+#define TLS_CHOSEN_CIPHER                 105
+#define TLS_ENABLE_CIPHER                 106
 
 /* TCP options */
 #define TCP_UPGRADE_TLS         33
