@@ -36,7 +36,6 @@
 #define TLS_VERSION_MIN			 102
 #define TLS_VERSION_MAX			 103
 #define TLS_VERSION_CONN		 104
->>>>>>> 943b4de449d47053962288d8e4810875008fc199
 
 /* TCP options */
 #define TCP_UPGRADE_TLS         33
