@@ -180,11 +180,8 @@ int tls_common_setsockopt(tls_sock_data_t* sock_data, struct socket *sock, int l
 	}
 
 	switch (optname) {
-	case TLS_REMOTE_HOSTNAME:
-		ret = set_remote_hostname(sock_data, koptval, optlen);
-		break;
 	case TLS_HOSTNAME:
-		ret = 0;
+		ret = set_remote_hostname(sock_data, koptval, optlen);
 		break;
 	case TLS_TRUSTED_PEER_CERTIFICATES:
 	case TLS_CERTIFICATE_CHAIN:
@@ -201,20 +198,10 @@ int tls_common_setsockopt(tls_sock_data_t* sock_data, struct socket *sock, int l
 		}
 		ret = 0;
 		break;
-	case TLS_ALPN:
-	case TLS_SESSION_TTL:
-	case TLS_DISABLE_CIPHER:
-	case TLS_PEER_IDENTITY:
-    case TLS_TRUSTED_CIPHERS:
-
-		ret = 0;
-		break;
 	case TLS_REQUEST_PEER_AUTH:
 		timeout_val = HZ*150;
 		ret = 0;
 		break;
-	case TLS_PEER_CERTIFICATE_CHAIN:
-	case TLS_ID:
 	default:
 		ret = 0;
 		break;
@@ -250,7 +237,9 @@ int tls_common_setsockopt(tls_sock_data_t* sock_data, struct socket *sock, int l
 }
 
 
-int tls_common_getsockopt(tls_sock_data_t* sock_data, struct socket *sock, int level, int optname, char __user *optval, int __user *optlen, getsockopt_t orig_func) {
+int tls_common_getsockopt(tls_sock_data_t* sock_data, struct socket *sock, 
+            int level, int optname, char __user *optval, 
+            int __user *optlen, getsockopt_t orig_func) {
 	int len;
 	if (get_user(len, optlen)) {
 		return -EFAULT;
@@ -264,21 +253,12 @@ int tls_common_getsockopt(tls_sock_data_t* sock_data, struct socket *sock, int l
 	}
 
 	switch (optname) {
-	case TLS_REMOTE_HOSTNAME:
-		return get_remote_hostname(sock_data, optval, optlen);
 	case TLS_HOSTNAME:
-	case TLS_TRUSTED_PEER_CERTIFICATES:
-	case TLS_CERTIFICATE_CHAIN:
-	case TLS_PRIVATE_KEY:
-	case TLS_ALPN:
-	case TLS_SESSION_TTL:
-	case TLS_DISABLE_CIPHER:
-	case TLS_PEER_IDENTITY:
-	case TLS_REQUEST_PEER_AUTH:
-	case TLS_PEER_CERTIFICATE_CHAIN:
-    case TLS_TRUSTED_CIPHERS:
-    case TLS_ERROR:
-    case TLS_CHOSEN_CIPHER:
+		return get_remote_hostname(sock_data, optval, optlen);
+	case TLS_ID:
+		return get_id(sock_data, optval, optlen);
+	
+    default:
 		send_getsockopt_notification((unsigned long)sock_data->key, level, optname, sock_data->daemon_id);
 		if (wait_for_completion_timeout(&sock_data->sock_event, RESPONSE_TIMEOUT) == 0) {
 			/* Let's lie to the application if the daemon isn't responding */
@@ -305,10 +285,6 @@ int tls_common_getsockopt(tls_sock_data_t* sock_data, struct socket *sock, int l
 			return -EFAULT;
 		}
 		break;
-	case TLS_ID:
-		return get_id(sock_data, optval, optlen);
-	default:
-		return -EOPNOTSUPP;
 	}
 
 	return 0;
