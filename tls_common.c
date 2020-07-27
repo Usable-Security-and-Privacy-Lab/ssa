@@ -186,7 +186,7 @@ int tls_common_setsockopt(tls_sock_data_t* sock_data, struct socket *sock, int l
 	case TLS_TRUSTED_PEER_CERTIFICATES:
 	case TLS_CERTIFICATE_CHAIN:
     case TLS_PRIVATE_KEY:
-   
+
 		/* We convert relative paths to absolute ones
 		 * here. We also skip things prefixed with '-'
 		 * because that denotes direct PEM encoding */
