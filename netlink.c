@@ -10,7 +10,7 @@ int daemon_listen_err_cb(struct sk_buff* skb, struct genl_info* info);
 int daemon_data_cb(struct sk_buff* skb, struct genl_info* info);
 int daemon_handshake_cb(struct sk_buff* skb, struct genl_info* info);
 
-/* TODO: change all of these fields to enforce strict validation */
+/* netlink still validates everything but range when NLA_VALIDATE_NONE is set */
 static const struct nla_policy ssa_nl_policy[SSA_NL_A_MAX + 1] = {
 	[SSA_NL_A_ID] = {
 		.type = NLA_U64,
@@ -146,17 +146,10 @@ static const struct genl_multicast_group ssa_nl_grps[] = {
 };
 
 static struct genl_family ssa_nl_family = {
-	.hdrsize = 0,
 	.name = "SSA",
 	.version = 1,
 	.maxattr = SSA_NL_A_MAX,
-	.netnsok = 0,
-	.parallel_ops = 0,
 	.policy = ssa_nl_policy,
-	.pre_doit = NULL,
-	.post_doit = NULL,
-	.mcast_bind = NULL,
-	.mcast_unbind = NULL,
 	.ops = ssa_nl_ops,
 	.mcgrps = ssa_nl_grps,
 	.n_ops = ARRAY_SIZE(ssa_nl_ops),
