@@ -27,9 +27,9 @@
 #define TLS_ERROR			 100
 
 /* TLS versions */
-#define TLS_VERSION_MIN			 102
-#define TLS_VERSION_MAX			 103
-#define TLS_VERSION_CONN		 104
+#define TLS_VERSION_MIN			 111
+#define TLS_VERSION_MAX			 112
+#define TLS_VERSION_CONN		 113
 
 /* TCP options */
 #define TCP_UPGRADE_TLS         33
