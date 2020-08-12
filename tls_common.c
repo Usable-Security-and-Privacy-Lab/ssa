@@ -253,8 +253,6 @@ int tls_common_getsockopt(tls_sock_data_t* sock_data, struct socket *sock,
 	}
 
 	switch (optname) {
-	case TLS_HOSTNAME:
-		return get_remote_hostname(sock_data, optval, optlen);
 	case TLS_ID:
 		return get_id(sock_data, optval, optlen);
 	
