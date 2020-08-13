@@ -55,7 +55,6 @@ typedef struct tls_sock_data {
 	int int_addrlen;
 	struct sockaddr rem_addr;
 	int rem_addrlen;
-    char *hostname;
 	int is_bound;
 	int is_error;
 	int async_connect;
