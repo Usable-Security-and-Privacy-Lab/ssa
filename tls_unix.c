@@ -121,9 +121,6 @@ int tls_unix_release(struct socket* sock) {
 	}
 	send_close_notification(sock_data->key, sock_data->daemon_id);
 	//wait_for_completion_timeout(&sock_data->sock_event, RESPONSE_TIMEOUT);
-	if (sock_data->hostname != NULL) {
-		kfree(sock_data->hostname);
-	}
 	rem_tls_sock_data(&sock_data->hash);
 	kfree(sock_data);
 	ref_unix_stream_ops.release(sock_data->unix_sock);
