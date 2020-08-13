@@ -118,9 +118,6 @@ int tls_inet_release(struct socket* sock) {
 	}
 	send_close_notification((unsigned long)sock, sock_data->daemon_id);
 	//wait_for_completion_timeout(&sock_data->sock_event, RESPONSE_TIMEOUT);
-	if (sock_data->hostname != NULL) {
-		kfree(sock_data->hostname);
-	}
 	rem_tls_sock_data(&sock_data->hash);
 	kfree(sock_data);
 	return ref_inet_stream_ops.release(sock);

@@ -18,9 +18,7 @@
 #define MAX_HOST_LEN		255
 
 /* Helpers */
-int get_remote_hostname(tls_sock_data_t* sock_data, char __user *optval, int* __user len);
 int get_id(tls_sock_data_t* sock_data, char __user *optval, int* __user optlen);
-int set_remote_hostname(tls_sock_data_t* sock_data, char* optval, unsigned int len);
 static int is_valid_host_string(char* str, int len);
 char* get_absolute_path(char* rpath, int* rpath_len);
 char* kgetcwd(char* buffer, int buflen);
@@ -77,9 +75,8 @@ void tls_cleanup(void) {
 		else {
 			(*ref_unix_release)((it->sk)->sk_socket);
 		}*/
-                hash_del(&it->hash);
-                kfree(it->hostname);
-		kfree(it);
+            hash_del(&it->hash);
+		    kfree(it);
         }
         spin_unlock(&tls_sock_data_table_lock);
 
@@ -180,9 +177,6 @@ int tls_common_setsockopt(tls_sock_data_t* sock_data, struct socket *sock, int l
 	}
 
 	switch (optname) {
-	case TLS_HOSTNAME:
-		ret = set_remote_hostname(sock_data, koptval, optlen);
-		break;
 	case TLS_TRUSTED_PEER_CERTIFICATES:
 	case TLS_CERTIFICATE_CHAIN:
     case TLS_PRIVATE_KEY:
@@ -288,43 +282,6 @@ int tls_common_getsockopt(tls_sock_data_t* sock_data, struct socket *sock,
 	return 0;
 }
 
-int set_remote_hostname(tls_sock_data_t* sock_data, char* optval, unsigned int len) {
-	/*
-	if (sock_data->is_connected == 1) {
-		return -EISCONN;
-	}
-	*/
-	if (len > MAX_HOST_LEN) {
-		return -EINVAL;
-	}
-	sock_data->hostname = krealloc(sock_data->hostname, len, GFP_KERNEL);
-	if (sock_data->hostname == NULL) {
-		return -ENOMEM;
-	}
-	if (!is_valid_host_string(optval, len)) {
-		return -EINVAL;
-	}
-	memcpy(sock_data->hostname, optval, len);
-	return  0;
-}
-
-int get_remote_hostname(tls_sock_data_t* sock_data, char __user *optval, int* __user len) {
-	int hostname_len;
-	char* hostname = NULL;
-	hostname = sock_data->hostname;
-	if (hostname == NULL) {
-		return -EFAULT;
-	}
-	hostname_len = strnlen(hostname, MAX_HOST_LEN) + 1;
-	if (*len < hostname_len) {
-		return -EINVAL;
-	}
-	if (copy_to_user(optval, hostname, hostname_len) != 0 ) {
-		return -EFAULT;
-	}
-	*len = hostname_len;
-	return 0;
-}
 
 int get_id(tls_sock_data_t* sock_data, char __user *optval, int* __user optlen) {
 	int len;
