@@ -11,7 +11,6 @@
 #include "socktls.h"
 #include "tls_common.h"
 #include "tls_inet.h"
-#include "tls_unix.h"
 #include "netlink.h"
 
 #define HASH_TABLE_BITSIZE	9
@@ -141,13 +140,8 @@ void report_handshake_finished(unsigned long key, int response) {
 	}
 	sock_data->response = response;
 	if (sock_data->async_connect == 1) {
-		if (sock_data->unix_sock == NULL) {
-			inet_trigger_connect((struct socket*)key, sock_data->daemon_id);
-		}
-		else {
-			unix_trigger_connect((struct socket*)key, sock_data->daemon_id);
-		}
-		sock_data->async_connect = 0;
+		inet_trigger_connect((struct socket*)key, sock_data->daemon_id);
+        sock_data->async_connect = 0;
 	}
 	else {
 		complete(&sock_data->sock_event);

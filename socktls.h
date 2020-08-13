@@ -38,9 +38,6 @@
 #define TLS_VERSION_CONN		 113
 
 
-/* TCP options */
-#define TCP_UPGRADE_TLS         33
-
 /* Address types */
 #define AF_HOSTNAME     43
 
@@ -49,9 +46,9 @@ struct host_addr {
 };
 
 struct sockaddr_host {
-        sa_family_t sin_family;
-        unsigned short sin_port;
-        struct host_addr sin_addr;
+    sa_family_t sin_family;
+    unsigned short sin_port;
+    struct host_addr sin_addr;
 };
 
 

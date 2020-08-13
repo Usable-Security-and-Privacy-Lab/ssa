@@ -35,7 +35,7 @@
 #define RESPONSE_TIMEOUT	HZ*10
 #define HANDSHAKE_TIMEOUT	HZ*180
 #define DAEMON_START_PORT	8443
-#define NUM_DAEMONS		1	
+#define NUM_DAEMONS		1
 
 typedef int (*setsockopt_t)(struct socket *sock, int level, int optname, char __user *optval, unsigned int optlen);
 typedef int (*getsockopt_t)(struct socket *sock, int level, int optname, char __user *optval, int __user *optlen);
@@ -48,7 +48,6 @@ typedef int (*getsockopt_t)(struct socket *sock, int level, int optname, char __
 typedef struct tls_sock_data {
 	unsigned long key;
         struct hlist_node hash;
-	struct socket* unix_sock;
 	struct sockaddr ext_addr;
 	int ext_addrlen;
 	struct sockaddr int_addr;

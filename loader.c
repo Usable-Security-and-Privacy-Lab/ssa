@@ -39,8 +39,6 @@
 #include <linux/cpumask.h>
 #include "tls_common.h"
 #include "tls_inet.h"
-#include "tls_unix.h"
-#include "tls_upgrade.h"
 #include "socktls.h"
 
 #define DRIVER_AUTHOR 	"Mark O'Neill <mark@markoneill.name> and Nick Bonner <j.nick.bonner@gmail.com>"
@@ -54,7 +52,6 @@ MODULE_AUTHOR(DRIVER_AUTHOR);
 MODULE_DESCRIPTION(DRIVER_DESC);
 
 /* The TLS protocol structures to be filled and registered */
-static int internal_transport_mode = INET_MODE;
 static struct proto tls_prot;
 static struct proto_ops tls_proto_ops;
 static struct net_protocol tls_protocol;
@@ -66,9 +63,6 @@ static struct inet_protosw tls_stream_protosw = {
 	.flags 		= INET_PROTOSW_ICSK
 };
 
-
-/* Auxillary support reference functions */
-int (*orig_tcp_setsockopt)(struct sock*, int, int, char __user*, unsigned int);
 
 static int __init ssa_init(void) {
 	int err;
@@ -82,11 +76,7 @@ static int __init ssa_init(void) {
 	tls_setup();
 
 	/* Obtain referencess to desired TLS handling functions */
-	if (internal_transport_mode == INET_MODE)
-		err = set_tls_prot_inet_stream(&tls_prot, &tls_proto_ops);
-	else /* transport mode == UNIX_MODE */
-		err = set_tls_prot_unix_stream(&tls_prot, &tls_proto_ops);
-
+	err = set_tls_prot_inet_stream(&tls_prot, &tls_proto_ops);
 	if (err != 0)
 		goto out;
 
@@ -125,11 +115,6 @@ static int __init ssa_init(void) {
 	}
 	inet_register_protosw(&tls_stream_protosw);
 
-
-	/* Register the setsockopt hooks for TLS upgrades */
-	orig_tcp_setsockopt = tcp_prot.setsockopt;
-	tcp_prot.setsockopt = hook_tcp_setsockopt;
-
 	printk(KERN_INFO "Initialized Secure Socket API module successfully\n");
 	return 0;
 
@@ -142,14 +127,7 @@ out_proto_unregister:
 
 static void __exit ssa_exit(void) {
 
-	if (internal_transport_mode == INET_MODE) {
-		inet_stream_cleanup();
-	}
-
-	/* Unregister the tcp hook */
-	if (orig_tcp_setsockopt != NULL) {
-		tcp_prot.setsockopt = orig_tcp_setsockopt;
-	}
+	inet_stream_cleanup();
 
 	/* Unregister the protocols and structs in the reverse order they were registered */
 	inet_del_protocol(&tls_protocol, IPPROTO_TLS);
