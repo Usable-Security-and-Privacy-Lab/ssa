@@ -19,7 +19,6 @@
 
 /* Helpers */
 int get_id(tls_sock_data_t* sock_data, char __user *optval, int* __user optlen);
-static int is_valid_host_string(char* str, int len);
 char* get_absolute_path(char* rpath, int* rpath_len);
 char* kgetcwd(char* buffer, int buflen);
 
@@ -296,28 +295,6 @@ int get_id(tls_sock_data_t* sock_data, char __user *optval, int* __user optlen) 
 		return -EFAULT;
 	}
 	return 0;
-}
-
-/*
- * Tests whether a socket option input contains only valid host name characters
- * as defined by RFC 952 and RFC 1123.
- * @param	str - A pointer to a string to be checked
- * @param	len - The length of str, including null terminator
- * @return	1 if string is valid and 0 otherwise
- */
-int is_valid_host_string(char* str, int len) {
-	int i;
-	char c;
-	for (i = 0; i < len-1; i++) {
-		c = str[i];
-                if (!isalnum(c) && c != '-' && c != '.') {
-			return 0;
-                }
-        }
-	if (str[len-1] != '\0') {
-		return 0;
-	}
-        return 1;
 }
 
 char* get_full_comm(char* buffer, int buflen) {
