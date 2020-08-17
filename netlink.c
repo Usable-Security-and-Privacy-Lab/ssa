@@ -286,32 +286,32 @@ int send_socket_notification(unsigned long id, char* comm, int port_id) {
 	skb = genlmsg_new(msg_size, GFP_KERNEL);
 	if (skb == NULL) {
 		printk(KERN_ALERT "Failed in genlmsg_new [socket notify]\n");
-		return -1;
+		return -ENOMEM;
 	}
 	msg_head = genlmsg_put(skb, 0, 0, &ssa_nl_family, 0, SSA_NL_C_SOCKET_NOTIFY);
 	if (msg_head == NULL) {
 		printk(KERN_ALERT "Failed in genlmsg_put [socket notify]\n");
 		nlmsg_free(skb);
-		return -1;
+		return -ENOBUFS;
 	}
 	ret = nla_put(skb, SSA_NL_A_ID, sizeof(id), &id);
 	if (ret != 0) {
 		printk(KERN_ALERT "Failed in nla_put (id) [socket notify]\n");
 		nlmsg_free(skb);
-		return -1;
+		return -ENOBUFS;
 	}
 	ret = nla_put(skb, SSA_NL_A_COMM, strlen(comm)+1, comm);
 	if (ret != 0) {
 		printk(KERN_ALERT "Failed in nla_put (comm) [socket notify]\n");
 		nlmsg_free(skb);
-		return -1;
+		return -ENOBUFS;
 	}
 	genlmsg_end(skb, msg_head);
 
 	ret = genlmsg_unicast(&init_net, skb, port_id);
 	if (ret != 0) {
 		printk(KERN_ALERT "Failed in genlmsg_unicast [socket notify]\n (%d)", ret);
-		return -1;
+		return -ENOTCONN;
 	}
 
 	return 0;

@@ -76,38 +76,59 @@ void inet_stream_cleanup(void) {
 }
 
 int tls_inet_init_sock(struct sock *sk) {
-	int ret;
-	tls_sock_data_t* sock_data;
-	char comm[NAME_MAX];
-	char* comm_ptr;
 
-	if ((sock_data = kmalloc(sizeof(tls_sock_data_t), GFP_KERNEL)) == NULL) {
-		printk(KERN_ALERT "kmalloc failed in tls_inet_init_sock\n");
-		return -1;
-	}
+    struct sockaddr_in* int_addr;
+    tls_sock_data_t* sock_data;
+    char comm[NAME_MAX];
+    char* comm_ptr;
+    int ret;
 
-	memset(sock_data, 0, sizeof(tls_sock_data_t));
-
-	((struct sockaddr_in*)&sock_data->int_addr)->sin_family = AF_INET;
-	((struct sockaddr_in*)&sock_data->int_addr)->sin_port = 0;
-	((struct sockaddr_in*)&sock_data->int_addr)->sin_addr.s_addr = htonl(INADDR_LOOPBACK);
-
-	sock_data->key = (unsigned long)sk->sk_socket;
-	spin_lock(&load_balance_lock);
-	sock_data->daemon_id = DAEMON_START_PORT + balancer;
-	//printk(KERN_INFO "Assigning new socket to daemon %d\n", sock_data->daemon_id);
-	balancer = (balancer + 1) % NUM_DAEMONS;
-	spin_unlock(&load_balance_lock);
-	init_completion(&sock_data->sock_event);
-	put_tls_sock_data(sock_data->key, &sock_data->hash);
 	ret = ref_tcp_prot.init(sk);
+    if (ret != 0)
+        return ret;
 
-	comm_ptr = get_full_comm(comm, NAME_MAX);
+    sock_data = kcalloc(1, sizeof(tls_sock_data_t), GFP_KERNEL);
+    if (sock_data == NULL) {
+        printk(KERN_ALERT "kmalloc failed in tls_inet_init_sock\n");
+        return -ENOMEM;
+    }
 
-	send_socket_notification((unsigned long)sk->sk_socket, comm_ptr, sock_data->daemon_id);
-	wait_for_completion_timeout(&sock_data->sock_event, RESPONSE_TIMEOUT);
-	/* We're not checking return values here because init_sock always returns 0 */
-	return ret;
+    int_addr = (struct sockaddr_in*) &sock_data->int_addr;
+    int_addr->sin_family = AF_INET;
+    int_addr->sin_port = 0;
+    int_addr->sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+
+    sock_data->key = (unsigned long)sk->sk_socket;
+    spin_lock(&load_balance_lock);
+    sock_data->daemon_id = DAEMON_START_PORT + balancer;
+    //printk(KERN_INFO "Assigning new socket to daemon %d\n", sock_data->daemon_id);
+    balancer = (balancer + 1) % NUM_DAEMONS;
+    spin_unlock(&load_balance_lock);
+    init_completion(&sock_data->sock_event);
+    put_tls_sock_data(sock_data->key, &sock_data->hash);
+
+    comm_ptr = get_full_comm(comm, NAME_MAX);
+
+    ret = send_socket_notification(sock_data->key, comm_ptr, sock_data->daemon_id);
+    if (ret != 0)
+        goto err;
+
+    ret = wait_for_completion_timeout(&sock_data->sock_event, RESPONSE_TIMEOUT);
+    if (ret == 0) {
+        ret = -ENOTCONN;
+        goto err;
+
+    }
+    /* We're not checking return values here because init_sock always returns 0 */
+    return ret;
+err:
+
+    if (sock_data != NULL) {
+        rem_tls_sock_data(&sock_data->hash);
+        kfree(sock_data);
+    }
+
+    return ret;
 }
 
 int tls_inet_release(struct socket* sock) {
