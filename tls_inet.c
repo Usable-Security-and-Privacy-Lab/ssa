@@ -83,10 +83,6 @@ int tls_inet_init_sock(struct sock *sk) {
     char* comm_ptr;
     int ret;
 
-	ret = ref_tcp_prot.init(sk);
-    if (ret != 0)
-        return ret;
-
     sock_data = kcalloc(1, sizeof(tls_sock_data_t), GFP_KERNEL);
     if (sock_data == NULL) {
         printk(KERN_ALERT "kmalloc failed in tls_inet_init_sock\n");
@@ -105,6 +101,12 @@ int tls_inet_init_sock(struct sock *sk) {
     balancer = (balancer + 1) % NUM_DAEMONS;
     spin_unlock(&load_balance_lock);
     init_completion(&sock_data->sock_event);
+	ret = ref_tcp_prot.init(sk);
+    if (ret != 0) {
+        kfree(sock_data);
+        return ret;
+    }
+
     put_tls_sock_data(sock_data->key, &sock_data->hash);
 
     comm_ptr = get_full_comm(comm, NAME_MAX);
@@ -117,10 +119,10 @@ int tls_inet_init_sock(struct sock *sk) {
     if (ret == 0) {
         ret = -ENOTCONN;
         goto err;
-
     }
     /* We're not checking return values here because init_sock always returns 0 */
-    return ret;
+    
+    return 0;
 err:
 
     if (sock_data != NULL) {
