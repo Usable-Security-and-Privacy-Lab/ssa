@@ -39,24 +39,35 @@ tls_sock_data_t* get_tls_sock_data(unsigned long key) {
 	return NULL;
 }
 
+unsigned long generate_unique_key(struct hlist_node* hash) {
+
+    unsigned long key;
+
+    do {
+        key = get_random_long();
+    } while (get_tls_sock_data(key) != NULL);
+
+    return key;
+}
+
 void put_tls_sock_data(unsigned long key, struct hlist_node* hash) {
+
 	spin_lock(&tls_sock_data_table_lock);
 	hash_add(tls_sock_data_table, hash, key);
 	spin_unlock(&tls_sock_data_table_lock);
-	return;
 }
 
 void rem_tls_sock_data(struct hlist_node* hash) {
+
 	spin_lock(&tls_sock_data_table_lock);
 	hash_del(hash);
 	spin_unlock(&tls_sock_data_table_lock);
-	return;
 }
 
 void tls_setup(void) {
+
 	register_netlink();
 	hash_init(tls_sock_data_table);
-	return;
 }
 
 void tls_cleanup(void) {
@@ -120,6 +131,7 @@ void report_data_return(unsigned long key, char* data, unsigned int len) {
 }
 
 void report_listening_err(unsigned long key) {
+
 	tls_sock_data_t* sock_data;
 	sock_data = get_tls_sock_data(key);
 	//BUG_ON(sock_data == NULL);

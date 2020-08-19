@@ -94,12 +94,14 @@ int tls_inet_init_sock(struct sock *sk) {
     int_addr->sin_port = 0;
     int_addr->sin_addr.s_addr = htonl(INADDR_LOOPBACK);
 
-    sock_data->key = (unsigned long)sk->sk_socket;
+    sock_data->key = generate_unique_key(&sock_data->hash);
+
     spin_lock(&load_balance_lock);
     sock_data->daemon_id = DAEMON_START_PORT + balancer;
     //printk(KERN_INFO "Assigning new socket to daemon %d\n", sock_data->daemon_id);
     balancer = (balancer + 1) % NUM_DAEMONS;
     spin_unlock(&load_balance_lock);
+
     init_completion(&sock_data->sock_event);
 	ret = ref_tcp_prot.init(sk);
     if (ret != 0) {
@@ -304,6 +306,7 @@ int tls_inet_listen(struct socket *sock, int backlog) {
 }
 
 int tls_inet_accept(struct socket *sock, struct socket *newsock, int flags, bool kern) {
+
 	tls_sock_data_t* listen_sock_data;
 	tls_sock_data_t* sock_data;
 	int ret;
@@ -314,8 +317,7 @@ int tls_inet_accept(struct socket *sock, struct socket *newsock, int flags, bool
 
 	/* We need to make sure the daemon's listener didn't keel over and die */
 	if (listen_sock_data->is_error) {
-		/* it keeled over and died on us */
-		return -EBADFD;
+		return -EBADFD; /* it keeled over and died on us */
 	}
 
 	ret = ref_inet_stream_ops.accept(sock, newsock, flags, kern);
