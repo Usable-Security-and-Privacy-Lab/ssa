@@ -280,8 +280,7 @@ int send_socket_notification(unsigned long id, char* comm, int port_id) {
 	struct sk_buff* skb;
 	int ret;
 	void* msg_head;
-	int msg_size = nla_total_size(sizeof(unsigned long)) +
-			nla_total_size(strlen(comm)+1);
+	int msg_size = nla_total_size(sizeof(id)) + nla_total_size(strlen(comm)+1);
 
 	skb = genlmsg_new(msg_size, GFP_KERNEL);
 	if (skb == NULL) {
@@ -325,9 +324,9 @@ int send_setsockopt_notification(unsigned long id, int level, int optname, void*
 	struct sk_buff* skb;
 	int ret;
 	void* msg_head;
-	int msg_size = nla_total_size(sizeof(unsigned long)) +
-			2 * nla_total_size(sizeof(int)) +
-			nla_total_size(optlen);
+	int msg_size = nla_total_size(sizeof(id)) +
+    			2 * nla_total_size(sizeof(int)) +
+    			nla_total_size(optlen);
 
 	skb = genlmsg_new(msg_size, GFP_KERNEL);
 	if (skb == NULL) {
@@ -382,8 +381,8 @@ int send_getsockopt_notification(unsigned long id, int level, int optname, int p
 	struct sk_buff* skb;
 	int ret;
 	void* msg_head;
-	int msg_size = nla_total_size(sizeof(unsigned long)) +
-			2 * nla_total_size(sizeof(int));
+	int msg_size = nla_total_size(sizeof(id)) +
+			    2 * nla_total_size(sizeof(int));
 
 	skb = genlmsg_new(msg_size, GFP_KERNEL);
 	if (skb == NULL) {
@@ -432,7 +431,7 @@ int send_bind_notification(unsigned long id, struct sockaddr* int_addr, struct s
 	struct sk_buff* skb;
 	int ret;
 	void* msg_head;
-	int msg_size = nla_total_size(sizeof(unsigned long)) +
+	int msg_size = nla_total_size(sizeof(id)) +
 			2 * nla_total_size(sizeof(struct sockaddr));
 
 	skb = genlmsg_new(msg_size, GFP_KERNEL);
@@ -482,7 +481,7 @@ int send_connect_notification(unsigned long id, struct sockaddr* int_addr, struc
 	struct sk_buff* skb;
 	int ret;
 	void* msg_head;
-	int msg_size = nla_total_size(sizeof(unsigned long)) +
+	int msg_size = nla_total_size(sizeof(id)) +
 			nla_total_size(sizeof(int)) +
 			2 * nla_total_size(sizeof(struct sockaddr));
 
@@ -539,7 +538,7 @@ int send_listen_notification(unsigned long id, struct sockaddr* int_addr, struct
 	struct sk_buff* skb;
 	int ret;
 	void* msg_head;
-	int msg_size = nla_total_size(sizeof(unsigned long)) +
+	int msg_size = nla_total_size(sizeof(id)) +
 			2 * nla_total_size(sizeof(struct sockaddr));
 
 	skb = genlmsg_new(msg_size, GFP_KERNEL);
@@ -589,7 +588,7 @@ int send_accept_notification(unsigned long id, struct sockaddr* int_addr, int po
 	struct sk_buff* skb;
 	int ret;
 	void* msg_head;
-	int msg_size = nla_total_size(sizeof(unsigned long)) +
+	int msg_size = nla_total_size(sizeof(id)) +
 			nla_total_size(sizeof(struct sockaddr)) +
 			nla_total_size(sizeof(int));
 
@@ -634,7 +633,7 @@ int send_close_notification(unsigned long id, int port_id) {
 	struct sk_buff* skb;
 	int ret;
 	void* msg_head;
-	int msg_size = nla_total_size(sizeof(unsigned long));
+	int msg_size = nla_total_size(sizeof(id));
 
 	skb = genlmsg_new(msg_size, GFP_KERNEL);
 	if (skb == NULL) {

@@ -70,7 +70,8 @@ tls_sock_data_t* get_tls_sock_data(unsigned long key);
 void put_tls_sock_data(unsigned long key, struct hlist_node* hash);
 void rem_tls_sock_data(struct hlist_node* hash);
 
-unsigned long generate_unique_key(struct hlist_node* hash);
+unsigned long get_sock_id(struct socket* sock);
+
 
 /* Allocation */
 void tls_setup(void);

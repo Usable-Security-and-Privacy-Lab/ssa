@@ -94,7 +94,7 @@ int tls_inet_init_sock(struct sock *sk) {
     int_addr->sin_port = 0;
     int_addr->sin_addr.s_addr = htonl(INADDR_LOOPBACK);
 
-    sock_data->key = generate_unique_key(&sock_data->hash);
+    sock_data->key = get_sock_id(sk->sk_socket);
 
     spin_lock(&load_balance_lock);
     sock_data->daemon_id = DAEMON_START_PORT + balancer;
@@ -136,12 +136,16 @@ err:
 }
 
 int tls_inet_release(struct socket* sock) {
-	tls_sock_data_t* sock_data = get_tls_sock_data((unsigned long)sock);
+    
+    unsigned long sock_id = get_sock_id(sock);
+	tls_sock_data_t* sock_data = get_tls_sock_data(sock_id);
+
 	if (sock_data == NULL) {
 		/* We're not treating this particular socket.*/
 		return ref_inet_stream_ops.release(sock);
 	}
-	send_close_notification((unsigned long)sock, sock_data->daemon_id);
+
+	send_close_notification(sock_id, sock_data->daemon_id);
 	//wait_for_completion_timeout(&sock_data->sock_event, RESPONSE_TIMEOUT);
 	rem_tls_sock_data(&sock_data->hash);
 	kfree(sock_data);
@@ -149,13 +153,14 @@ int tls_inet_release(struct socket* sock) {
 }
 
 int tls_inet_bind(struct socket *sock, struct sockaddr *uaddr, int addr_len) {
+
 	int ret;
-	tls_sock_data_t* sock_data;
+    unsigned long sock_id = get_sock_id(sock);
+	tls_sock_data_t* sock_data = get_tls_sock_data(sock_id);
 	/* We disregard the address the application wants to bind to in favor
 	 * of one assigned by the system (using sin_port = 0 on localhost),
 	 * so that we can have the TLS wrapper daemon bind to the actual one */
 
-	sock_data = get_tls_sock_data((unsigned long)sock);
 	ret = ref_inet_stream_ops.bind(sock, &sock_data->int_addr, addr_len);
 	/* We only want to continue if the internal socket bind succeeds */
 	if (ret != 0) {
@@ -167,7 +172,7 @@ int tls_inet_bind(struct socket *sock, struct sockaddr *uaddr, int addr_len) {
 	 * it for us */
 	((struct sockaddr_in*)&sock_data->int_addr)->sin_port = inet_sk(sock->sk)->inet_sport;
 
-	send_bind_notification((unsigned long)sock, &sock_data->int_addr,
+	send_bind_notification(get_sock_id(sock), &sock_data->int_addr,
 			(struct sockaddr*)uaddr, sock_data->daemon_id);
 	if (wait_for_completion_timeout(&sock_data->sock_event, RESPONSE_TIMEOUT) == 0) {
 		/* Let's lie to the application if the daemon isn't responding */
@@ -184,9 +189,6 @@ int tls_inet_bind(struct socket *sock, struct sockaddr *uaddr, int addr_len) {
 }
 
 int tls_inet_connect(struct socket *sock, struct sockaddr *uaddr, int addr_len, int flags) {
-	int ret;
-	/*struct sockaddr_in* uaddr_in;*/
-	int blocking;
 
 	struct sockaddr_in reroute_addr = {
 		.sin_family = AF_INET,
@@ -198,8 +200,11 @@ int tls_inet_connect(struct socket *sock, struct sockaddr *uaddr, int addr_len, 
 		.sin_addr.s_addr = htonl(INADDR_LOOPBACK),
 	};
 
-	/* Save original destination address information */
-	tls_sock_data_t* sock_data = get_tls_sock_data((unsigned long)sock);
+    unsigned long sock_id = get_sock_id(sock);
+    tls_sock_data_t* sock_data = get_tls_sock_data(sock_id);
+	int ret, blocking;
+
+    /* Save original destination address information */
 	sock_data->rem_addr = (struct sockaddr)(*uaddr);
 	sock_data->rem_addrlen = addr_len;
 
@@ -239,7 +244,7 @@ int tls_inet_connect(struct socket *sock, struct sockaddr *uaddr, int addr_len, 
 
 	if (blocking == 0) {
 		sock_data->async_connect = 1;
-		send_connect_notification((unsigned long)sock, &sock_data->int_addr, uaddr, blocking,
+		send_connect_notification(sock_id, &sock_data->int_addr, uaddr, blocking,
 			sock_data->daemon_id);
 		printk(KERN_ALERT "nonblocking wait going\n");
 		if (wait_for_completion_timeout(&sock_data->sock_event, RESPONSE_TIMEOUT) == 0) {
@@ -254,7 +259,7 @@ int tls_inet_connect(struct socket *sock, struct sockaddr *uaddr, int addr_len, 
 	}
 
 	/* Blocking case */
-	send_connect_notification((unsigned long)sock, &sock_data->int_addr, uaddr, blocking,
+	send_connect_notification(sock_id, &sock_data->int_addr, uaddr, blocking,
 			sock_data->daemon_id);
 	if (wait_for_completion_timeout(&sock_data->sock_event, HANDSHAKE_TIMEOUT) == 0)
 		return -EHOSTUNREACH; /* Lie to the application if the daemon isn't responding */
@@ -275,12 +280,16 @@ int tls_inet_connect(struct socket *sock, struct sockaddr *uaddr, int addr_len, 
 }
 
 int tls_inet_listen(struct socket *sock, int backlog) {
-	tls_sock_data_t* sock_data = get_tls_sock_data((unsigned long)sock);
-        struct sockaddr_in int_addr = {
-                .sin_family = AF_INET,
-                .sin_port = 0,
-                .sin_addr.s_addr = htonl(INADDR_LOOPBACK),
-        };
+
+    struct sockaddr_in int_addr = {
+        .sin_family = AF_INET,
+        .sin_port = 0,
+        .sin_addr.s_addr = htonl(INADDR_LOOPBACK),
+    };
+
+    unsigned long sock_id = get_sock_id(sock);
+	tls_sock_data_t* sock_data = get_tls_sock_data(sock_id);
+
 
 	if (sock_data->is_bound == 0) {
 		ref_inet_stream_ops.bind(sock, (struct sockaddr*)&int_addr, sizeof(int_addr));
@@ -289,7 +298,7 @@ int tls_inet_listen(struct socket *sock, int backlog) {
 		sock_data->int_addrlen = sizeof(int_addr);
 		sock_data->is_bound = 1;
 	}
-	send_listen_notification((unsigned long)sock, 
+	send_listen_notification(sock_id, 
 			(struct sockaddr*)&sock_data->int_addr,
 		        (struct sockaddr*)&sock_data->ext_addr,
 			sock_data->daemon_id);
@@ -307,11 +316,11 @@ int tls_inet_listen(struct socket *sock, int backlog) {
 
 int tls_inet_accept(struct socket *sock, struct socket *newsock, int flags, bool kern) {
 
-	tls_sock_data_t* listen_sock_data;
-	tls_sock_data_t* sock_data;
+    unsigned long listen_sock_id = get_sock_id(sock);
+	tls_sock_data_t* listen_sock_data = get_tls_sock_data(listen_sock_id);
+	tls_sock_data_t* sock_data = NULL;
 	int ret;
 
-	listen_sock_data = get_tls_sock_data((unsigned long)sock);
 	if (listen_sock_data == NULL)
 		return -EBADF;
 
@@ -332,21 +341,23 @@ int tls_inet_accept(struct socket *sock, struct socket *newsock, int flags, bool
 	memset(sock_data, 0, sizeof(tls_sock_data_t));
 
 	sock_data->daemon_id = listen_sock_data->daemon_id;
-	sock_data->key = (unsigned long)newsock;
+	sock_data->key = get_sock_id(newsock);
 	init_completion(&sock_data->sock_event);
 	put_tls_sock_data(sock_data->key, &sock_data->hash);
 
 	((struct sockaddr_in*)&sock_data->int_addr)->sin_family = AF_INET;
 	((struct sockaddr_in*)&sock_data->int_addr)->sin_port = inet_sk(newsock->sk)->inet_dport;
 	((struct sockaddr_in*)&sock_data->int_addr)->sin_addr.s_addr = htonl(INADDR_LOOPBACK);
-	send_accept_notification((unsigned long)newsock, &sock_data->int_addr, sock_data->daemon_id);
+	send_accept_notification(sock_data->key, &sock_data->int_addr, sock_data->daemon_id);
 	if (wait_for_completion_interruptible(&sock_data->sock_event) != 0)
 		return -EINTR;
 	return sock_data->response;
 }
 
 int tls_inet_setsockopt(struct socket *sock, int level, int optname, char __user *optval, unsigned int optlen) {
-	tls_sock_data_t* sock_data = get_tls_sock_data((unsigned long)sock);
+
+    unsigned long sock_id = get_sock_id(sock);
+	tls_sock_data_t* sock_data = get_tls_sock_data(sock_id);
 	if (sock_data == NULL)
 		return -EBADF;
 	
@@ -354,18 +365,22 @@ int tls_inet_setsockopt(struct socket *sock, int level, int optname, char __user
 }
 
 int tls_inet_getsockopt(struct socket *sock, int level, int optname, char __user *optval, int __user *optlen) {
-	tls_sock_data_t* sock_data = get_tls_sock_data((unsigned long)sock);
-	if (sock_data == NULL) {
-		return -EBADF;
-	}
-	return tls_common_getsockopt(sock_data, sock, level, optname, optval, optlen, ref_inet_stream_ops.getsockopt);
+
+    unsigned long sock_id = get_sock_id(sock);
+	tls_sock_data_t* sock_data = get_tls_sock_data(sock_id);
+    if (sock_data == NULL)
+        return -EBADF;
+
+    return tls_common_getsockopt(sock_data, sock, level, optname, optval, optlen, ref_inet_stream_ops.getsockopt);
 }
 
 void inet_trigger_connect(struct socket* sock, int daemon_id) {
+
 	struct sockaddr_in reroute_addr = {
 		.sin_family = AF_INET,
 		.sin_addr.s_addr = htonl(INADDR_LOOPBACK)
 	};
+
 	reroute_addr.sin_port = htons(daemon_id);
 	ref_inet_stream_ops.connect(sock, ((struct sockaddr*)&reroute_addr), sizeof(reroute_addr), O_NONBLOCK);
 	printk(KERN_ALERT "Async connect done\n");

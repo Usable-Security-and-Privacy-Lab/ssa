@@ -30,8 +30,10 @@ static DEFINE_SPINLOCK(tls_sock_data_table_lock);
  * @return	TLS socket data associated with key, if any. If not found, returns NULL
  */
 tls_sock_data_t* get_tls_sock_data(unsigned long key) {
+
 	tls_sock_data_t* it;
-	hash_for_each_possible(tls_sock_data_table, it, hash, (unsigned long)key) {
+
+	hash_for_each_possible(tls_sock_data_table, it, hash, key) {
 		if (it->key == key) {
 			return it;
 		}
@@ -39,16 +41,31 @@ tls_sock_data_t* get_tls_sock_data(unsigned long key) {
 	return NULL;
 }
 
-unsigned long generate_unique_key(struct hlist_node* hash) {
 
-    unsigned long key;
+unsigned long get_randomizer(void) {
 
-    do {
-        key = get_random_long();
-    } while (get_tls_sock_data(key) != NULL);
+    static unsigned long randomizer;
+    static int rand_number_set = 0;
+    static DEFINE_SPINLOCK(randomizer_lock);
 
-    return key;
+    if (!rand_number_set) { /* to make sure spinlock isn't used unnecessarily */
+        spin_lock(&randomizer_lock);
+        if (!rand_number_set) { /* to make sure `randomizer` only ever set once */
+            randomizer = get_random_long();
+            rand_number_set = 1;
+        }
+        spin_unlock(&randomizer_lock);
+    }
+
+    return randomizer;
 }
+
+
+unsigned long get_sock_id(struct socket* sock) {
+
+    return ((unsigned long) sock) ^ get_randomizer();
+}
+
 
 void put_tls_sock_data(unsigned long key, struct hlist_node* hash) {
 
@@ -96,6 +113,7 @@ void tls_cleanup(void) {
 
 
 void report_return(unsigned long key, int ret) {
+
 	tls_sock_data_t* sock_data;
 	sock_data = get_tls_sock_data(key);
 	//BUG_ON(sock_data == NULL);
@@ -163,9 +181,12 @@ void report_handshake_finished(unsigned long key, int response) {
 
 
 int tls_common_setsockopt(tls_sock_data_t* sock_data, struct socket *sock, int level, int optname, char __user *optval, unsigned int optlen, setsockopt_t orig_func) {
-	int ret;
+	
+    
 	int timeout_val = RESPONSE_TIMEOUT;
+    int ret;
 	char* koptval;
+
 	if (optval == NULL) {
 		return -EINVAL;
 	}
@@ -214,7 +235,7 @@ int tls_common_setsockopt(tls_sock_data_t* sock_data, struct socket *sock, int l
 		return ret;
 	}
 
-	send_setsockopt_notification((unsigned long)sock_data->key, level, optname, koptval, optlen, sock_data->daemon_id);
+	send_setsockopt_notification(sock_data->key, level, optname, koptval, optlen, sock_data->daemon_id);
 	kfree(koptval);
 	if (wait_for_completion_timeout(&sock_data->sock_event, timeout_val) == 0) {
 		/* Let's lie to the application if the daemon isn't responding */
@@ -256,7 +277,7 @@ int tls_common_getsockopt(tls_sock_data_t* sock_data, struct socket *sock,
 		return get_id(sock_data, optval, optlen);
 	
     default:
-		send_getsockopt_notification((unsigned long)sock_data->key, level, optname, sock_data->daemon_id);
+		send_getsockopt_notification(sock_data->key, level, optname, sock_data->daemon_id);
 		if (wait_for_completion_timeout(&sock_data->sock_event, RESPONSE_TIMEOUT) == 0) {
 			/* Let's lie to the application if the daemon isn't responding */
 			return -ENOBUFS;
