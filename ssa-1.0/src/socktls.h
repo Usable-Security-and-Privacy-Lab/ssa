@@ -26,7 +26,7 @@
 #define TLS_CONTEXT                      107
 #define TLS_SESSION_REUSE                108
 #define TLS_RESUMED_SESSION              109
-
+#define TLS_ENABLE_CIPHER                110
 
 #define TLS_PEER_CERTIFICATE_CHAIN        95
 #define TLS_ID                            96

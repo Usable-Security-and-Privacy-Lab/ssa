@@ -161,6 +161,7 @@ void report_listening_err(unsigned long key) {
 }
 
 void report_handshake_finished(unsigned long key, int response) {
+
 	tls_sock_data_t* sock_data;
 	sock_data = get_tls_sock_data(key);
 	//BUG_ON(sock_data == NULL);
@@ -170,8 +171,9 @@ void report_handshake_finished(unsigned long key, int response) {
 	}
 	sock_data->response = response;
 	if (sock_data->async_connect == 1) {
-		inet_trigger_connect((struct socket*)key, sock_data->daemon_id);
+		inet_trigger_connect(sock_data->associated_socket, sock_data->daemon_id);
         sock_data->async_connect = 0;
+        
 	}
 	else {
 		complete(&sock_data->sock_event);
@@ -181,8 +183,7 @@ void report_handshake_finished(unsigned long key, int response) {
 
 
 int tls_common_setsockopt(tls_sock_data_t* sock_data, struct socket *sock, int level, int optname, char __user *optval, unsigned int optlen, setsockopt_t orig_func) {
-	
-    
+
 	int timeout_val = RESPONSE_TIMEOUT;
     int ret;
 	char* koptval;

@@ -46,6 +46,8 @@ typedef int (*getsockopt_t)(struct socket *sock, int level, int optname, char __
  * always abstract (and thus 6 bytes + sizeof(sa_family_t))
  */
 typedef struct tls_sock_data {
+
+    struct socket* associated_socket;
 	unsigned long key;
         struct hlist_node hash;
 	struct sockaddr ext_addr;
