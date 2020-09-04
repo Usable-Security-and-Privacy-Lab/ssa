@@ -95,6 +95,7 @@ int tls_inet_init_sock(struct sock *sk) {
     int_addr->sin_addr.s_addr = htonl(INADDR_LOOPBACK);
 
     sock_data->key = get_sock_id(sk->sk_socket);
+    sock_data->associated_socket = sk->sk_socket;
 
     spin_lock(&load_balance_lock);
     sock_data->daemon_id = DAEMON_START_PORT + balancer;
@@ -244,6 +245,7 @@ int tls_inet_connect(struct socket *sock, struct sockaddr *uaddr, int addr_len, 
 
 	if (blocking == 0) {
 		sock_data->async_connect = 1;
+
 		send_connect_notification(sock_id, &sock_data->int_addr, uaddr, blocking,
 			sock_data->daemon_id);
 		printk(KERN_ALERT "nonblocking wait going\n");
@@ -254,6 +256,7 @@ int tls_inet_connect(struct socket *sock, struct sockaddr *uaddr, int addr_len, 
 			sock->sk->sk_err = -sock_data->response;
 			return sock_data->response;
 		}
+
 		/* XXX should we mess with the socket state here? Maybe fake SS_CONNECTING? */
 		return 0;
 	}
