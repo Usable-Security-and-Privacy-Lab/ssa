@@ -268,7 +268,7 @@ int tls_inet_connect(struct socket *sock, struct sockaddr *uaddr, int addr_len, 
 
         /* inet_sk_state_store(sock->sk, TCP_SYN_SENT); */
         
-
+        /* do something with state here */
 
 		return 0;
 	}
