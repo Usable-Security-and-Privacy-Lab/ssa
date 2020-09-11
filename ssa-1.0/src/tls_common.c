@@ -174,8 +174,7 @@ void report_handshake_finished(unsigned long key, int response) {
 		inet_trigger_connect(sock_data->associated_socket, sock_data->daemon_id);
         sock_data->async_connect = 0;
         
-	}
-	else {
+	} else {
 		complete(&sock_data->sock_event);
 	}
 	return;

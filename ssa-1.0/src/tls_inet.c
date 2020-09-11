@@ -4,6 +4,7 @@
 #include <linux/string.h>
 #include <linux/in.h>
 #include <net/sock.h>
+#include <net/inet_sock.h>
 #include <net/tcp.h>
 #include <net/inet_common.h>
 #include <linux/limits.h>
@@ -178,16 +179,19 @@ int tls_inet_bind(struct socket *sock, struct sockaddr *uaddr, int addr_len) {
 	if (wait_for_completion_timeout(&sock_data->sock_event, RESPONSE_TIMEOUT) == 0) {
 		/* Let's lie to the application if the daemon isn't responding */
 		return -EADDRINUSE;
-	}
-	if (sock_data->response != 0) {
-		return sock_data->response;
-	}
-	sock_data->is_bound = 1;
-	sock_data->int_addrlen = addr_len;
-	sock_data->ext_addr = *uaddr;
-	sock_data->ext_addrlen = addr_len;
-	return 0;
+    }
+    if (sock_data->response != 0)
+        return sock_data->response;
+
+
+    sock_data->is_bound = 1;
+    sock_data->int_addrlen = addr_len;
+    sock_data->ext_addr = *uaddr;
+    sock_data->ext_addrlen = addr_len;
+    return 0;
 }
+
+
 
 int tls_inet_connect(struct socket *sock, struct sockaddr *uaddr, int addr_len, int flags) {
 
@@ -252,12 +256,20 @@ int tls_inet_connect(struct socket *sock, struct sockaddr *uaddr, int addr_len, 
 		if (wait_for_completion_timeout(&sock_data->sock_event, RESPONSE_TIMEOUT) == 0) {
 			return -EHOSTUNREACH;
 		}
+
+        /* here we do a cheeky snipe on the socket state to make poll think it's connecting */
+        printk(KERN_INFO "sk_state: %i\n", sock->sk->sk_state);
+	    sock->sk->sk_state = TCP_LISTEN;
+        
 		if (sock_data->response != 0) {
 			sock->sk->sk_err = -sock_data->response;
 			return sock_data->response;
 		}
 
-		/* XXX should we mess with the socket state here? Maybe fake SS_CONNECTING? */
+        /* inet_sk_state_store(sock->sk, TCP_SYN_SENT); */
+        
+
+
 		return 0;
 	}
 
@@ -265,7 +277,7 @@ int tls_inet_connect(struct socket *sock, struct sockaddr *uaddr, int addr_len, 
 	send_connect_notification(sock_id, &sock_data->int_addr, uaddr, blocking,
 			sock_data->daemon_id);
 	if (wait_for_completion_timeout(&sock_data->sock_event, HANDSHAKE_TIMEOUT) == 0)
-		return -EHOSTUNREACH; /* Lie to the application if the daemon isn't responding */
+		return -EHOSTUNREACH;
 
 	if (sock_data->response != 0)
 		return sock_data->response;
@@ -384,8 +396,15 @@ void inet_trigger_connect(struct socket* sock, int daemon_id) {
 		.sin_addr.s_addr = htonl(INADDR_LOOPBACK)
 	};
 
-	reroute_addr.sin_port = htons(daemon_id);
+    printk(KERN_INFO "sk_state in trigger_connect: %i\n", sock->sk->sk_state);
+    printk(KERN_INFO "sk_err in trigger_connect: %i\n", sock->sk->sk_err);
+    sock->sk->sk_state = TCP_CLOSE;
+	
+    reroute_addr.sin_port = htons(daemon_id);
 	ref_inet_stream_ops.connect(sock, ((struct sockaddr*)&reroute_addr), sizeof(reroute_addr), O_NONBLOCK);
+    printk(KERN_INFO "async connect sk->state: %i\n", sock->sk->sk_state);
+    printk(KERN_INFO "async connect sk->err: %i\n", sock->sk->sk_err);
+
 	printk(KERN_ALERT "Async connect done\n");
 	return;
 }
