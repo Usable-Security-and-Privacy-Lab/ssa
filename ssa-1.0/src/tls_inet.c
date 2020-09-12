@@ -40,7 +40,7 @@ unsigned int tls_inet_poll(struct file *file, struct socket *sock, struct poll_t
 
 int set_tls_prot_inet_stream(struct proto* tls_prot, struct proto_ops* tls_proto_ops) {
 	/* We share operations with TCP for transport to daemon */
-	*tls_prot = tcp_prot;
+	*tls_prot = tcp_prot;{
 	ref_tcp_prot = tcp_prot;
 
 	/* Guessing what the TLS-unique things should be here */
@@ -261,6 +261,9 @@ int tls_inet_connect(struct socket *sock, struct sockaddr *uaddr, int addr_len, 
 			return -EHOSTUNREACH;
 		}
 
+        /* here we do a cheeky snipe on the socket state to make poll think it's connecting */
+        printk(KERN_INFO "sk_state: %i\n", sock->sk->sk_state);
+        
 		if (sock_data->response != 0) {
 			sock->sk->sk_err = -sock_data->response;
             
@@ -395,8 +398,8 @@ void inet_trigger_connect(struct socket* sock, int daemon_id) {
 
     printk(KERN_INFO "sk_state in trigger_connect: %i\n", sock->sk->sk_state);
     printk(KERN_INFO "sk_err in trigger_connect: %i\n", sock->sk->sk_err);
-    sock->sk->sk_state = TCP_CLOSE;
-	
+
+
     reroute_addr.sin_port = htons(daemon_id);
 	ref_inet_stream_ops.connect(sock, ((struct sockaddr*)&reroute_addr), sizeof(reroute_addr), O_NONBLOCK);
     printk(KERN_INFO "async connect sk->state: %i\n", sock->sk->sk_state);
