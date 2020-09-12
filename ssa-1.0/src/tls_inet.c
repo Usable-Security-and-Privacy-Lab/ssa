@@ -40,7 +40,7 @@ unsigned int tls_inet_poll(struct file *file, struct socket *sock, struct poll_t
 
 int set_tls_prot_inet_stream(struct proto* tls_prot, struct proto_ops* tls_proto_ops) {
 	/* We share operations with TCP for transport to daemon */
-	*tls_prot = tcp_prot;{
+	*tls_prot = tcp_prot;
 	ref_tcp_prot = tcp_prot;
 
 	/* Guessing what the TLS-unique things should be here */
