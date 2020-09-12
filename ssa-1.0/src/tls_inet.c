@@ -33,6 +33,9 @@ int tls_inet_listen(struct socket *sock, int backlog);
 int tls_inet_accept(struct socket *sock, struct socket *newsock, int flags, bool kern);
 int tls_inet_setsockopt(struct socket *sock, int level, int optname, char __user *optval, unsigned int optlen);
 int tls_inet_getsockopt(struct socket *sock, int level, int optname, char __user *optval, int __user *optlen);
+
+unsigned int tls_inet_poll(struct file *file, struct socket *sock, struct poll_table_struct *wait);
+
 /* We don't need sendmsg, recvmsg, poll, etc here because we're using the native socket functions */
 
 int set_tls_prot_inet_stream(struct proto* tls_prot, struct proto_ops* tls_proto_ops) {
@@ -66,6 +69,7 @@ int set_tls_prot_inet_stream(struct proto* tls_prot, struct proto_ops* tls_proto
 	tls_proto_ops->accept = tls_inet_accept;
 	tls_proto_ops->setsockopt = tls_inet_setsockopt;
 	tls_proto_ops->getsockopt = tls_inet_getsockopt;
+    tls_proto_ops->poll = tls_inet_poll;
 
 	return 0;
 }
@@ -257,18 +261,11 @@ int tls_inet_connect(struct socket *sock, struct sockaddr *uaddr, int addr_len, 
 			return -EHOSTUNREACH;
 		}
 
-        /* here we do a cheeky snipe on the socket state to make poll think it's connecting */
-        printk(KERN_INFO "sk_state: %i\n", sock->sk->sk_state);
-	    sock->sk->sk_state = TCP_LISTEN;
-        
 		if (sock_data->response != 0) {
 			sock->sk->sk_err = -sock_data->response;
+            
 			return sock_data->response;
 		}
-
-        /* inet_sk_state_store(sock->sk, TCP_SYN_SENT); */
-        
-        /* do something with state here */
 
 		return 0;
 	}
@@ -407,4 +404,24 @@ void inet_trigger_connect(struct socket* sock, int daemon_id) {
 
 	printk(KERN_ALERT "Async connect done\n");
 	return;
+}
+
+
+unsigned int tls_inet_poll(struct file *file, struct socket *sock, struct poll_table_struct *wait) {
+
+    unsigned long sock_id = get_sock_id(sock);
+    tls_sock_data_t* sock_data = get_tls_sock_data(sock_id);
+
+    if (sock_data->async_connect == 1) {
+        printk(KERN_INFO "called tls_inet_poll on async_connecting socket\n");
+        sock_poll_wait(file, sock, wait);
+        
+        /* TODO: include 'smp_rmb();' here?? any other functions? */
+        return 0;
+    }
+    else {
+        printk(KERN_INFO "called tls_inet_poll on non-async socket\n");
+        printk(KERN_INFO "socket state:%i\n", sock->sk->sk_state);
+        return ref_inet_stream_ops.poll(file, sock, wait);
+    }
 }
