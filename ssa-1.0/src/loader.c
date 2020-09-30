@@ -89,7 +89,7 @@ static int __init ssa_init(void) {
 	tls_setup();
 
 	/* Obtain referencess to desired TLS handling functions */
-	ret = set_tls_protos(&tls_prot, &tls_proto_ops);
+	ret = init_tls_protos(&tls_prot, &tls_proto_ops);
 	if (ret != 0)
 		goto err;
 

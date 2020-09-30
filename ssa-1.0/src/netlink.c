@@ -24,9 +24,9 @@ static const struct nla_policy ssa_nl_policy[SSA_NL_A_MAX + 1] = {
         .min = 0,
         .max = 1,
 	},
-	[SSA_NL_A_COMM] = {
-		.type = NLA_NUL_STRING,
-		.len = NAME_MAX,
+	[SSA_NL_A_FAMILY] = {
+		.type = NLA_U16,
+		.len = 0,
 		.validation_type = NLA_VALIDATE_NONE,
 	},
 	[SSA_NL_A_SOCKADDR_INTERNAL] = {
@@ -276,11 +276,11 @@ void unregister_netlink() {
  * Forms and sends a netlink notification to the daemon to create a new
  * socket and assign it the given id.
  */
-int send_socket_notification(unsigned long id, char* comm, int port_id) {
+int send_socket_notification(unsigned long id, unsigned short family, int port_id) {
 	struct sk_buff* skb;
 	int ret;
 	void* msg_head;
-	int msg_size = nla_total_size(sizeof(id)) + nla_total_size(strlen(comm)+1);
+	int msg_size = nla_total_size(sizeof(id)) + nla_total_size(sizeof(family));
 
 	skb = genlmsg_new(msg_size, GFP_KERNEL);
 	if (skb == NULL) {
@@ -299,9 +299,9 @@ int send_socket_notification(unsigned long id, char* comm, int port_id) {
 		nlmsg_free(skb);
 		return -ENOBUFS;
 	}
-	ret = nla_put(skb, SSA_NL_A_COMM, strlen(comm)+1, comm);
+	ret = nla_put(skb, SSA_NL_A_FAMILY, sizeof(family), &family);
 	if (ret != 0) {
-		printk(KERN_ALERT "Failed in nla_put (comm) [socket notify]\n");
+		printk(KERN_ALERT "Failed in nla_put (family) [socket notify]\n");
 		nlmsg_free(skb);
 		return -ENOBUFS;
 	}

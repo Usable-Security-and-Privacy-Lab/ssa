@@ -8,7 +8,7 @@ enum {
     SSA_NL_A_UNSPEC,
     SSA_NL_A_ID,
     SSA_NL_A_BLOCKING,
-    SSA_NL_A_COMM,
+    SSA_NL_A_FAMILY,
     SSA_NL_A_SOCKADDR_INTERNAL,
     SSA_NL_A_SOCKADDR_EXTERNAL,
     SSA_NL_A_SOCKADDR_REMOTE,
@@ -49,7 +49,7 @@ enum ssa_nl_groups {
 
 
 int register_netlink(void);
-int send_socket_notification(unsigned long id, char* comm, int port_id);
+int send_socket_notification(unsigned long id, unsigned short family, int port_id);
 int send_setsockopt_notification(unsigned long id, int level, int optname, void* optval, int optlen, int port_id);
 int send_getsockopt_notification(unsigned long id, int level, int optname, int port_id);
 int send_bind_notification(unsigned long id, struct sockaddr* int_addr, struct sockaddr* ext_addr, int port_id);

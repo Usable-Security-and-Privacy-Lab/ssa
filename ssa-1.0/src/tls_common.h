@@ -32,6 +32,9 @@
 #include <linux/socket.h>
 #include <linux/net.h>
 
+#include "tls_sock_data.h"
+
+
 #define RESPONSE_TIMEOUT	HZ*10
 #define HANDSHAKE_TIMEOUT	HZ*180
 #define DAEMON_START_PORT	8443
@@ -40,50 +43,6 @@
 typedef int (*setsockopt_t)(struct socket *sock, int level, int optname, char __user *optval, unsigned int optlen);
 typedef int (*getsockopt_t)(struct socket *sock, int level, int optname, char __user *optval, int __user *optlen);
 
-/* This struct holds additional data needed by our TLS sockets */
-/* This structure only works because sockaddr is going
- * to be bigger than our sockaddr_un addresses, which are
- * always abstract (and thus 6 bytes + sizeof(sa_family_t))
- */
-typedef struct tls_sock_data {
-
-    struct socket* associated_socket;
-	unsigned long key;
-        struct hlist_node hash;
-	struct sockaddr ext_addr;
-	int ext_addrlen;
-	struct sockaddr int_addr;
-	int int_addrlen;
-	struct sockaddr rem_addr;
-	int rem_addrlen;
-	int is_bound;
-	int is_error;
-	int async_connect;
-	int interrupted; 
-	struct completion sock_event;
-	int response;
-	char* rdata; /* returned data from asynchronous callback */
-	unsigned int rdata_len; /* length of data returned from async callback */
-	int daemon_id; /* userspace daemon to which the socket is assigned */
-} tls_sock_data_t;
-
-/* Hashing */
-tls_sock_data_t* get_tls_sock_data(unsigned long key);
-void put_tls_sock_data(unsigned long key, struct hlist_node* hash);
-void rem_tls_sock_data(struct hlist_node* hash);
-
-unsigned long get_sock_id(struct socket* sock);
-
-
-/* Allocation */
-void tls_setup(void);
-void tls_cleanup(void);
-
-/* Data reporting */
-void report_return(unsigned long key, int ret);
-void report_listening_err(unsigned long key);
-void report_data_return(unsigned long key, char* data, unsigned int len);
-void report_handshake_finished(unsigned long key, int response);
 
 /* Socket functionality */
 int tls_common_setsockopt(tls_sock_data_t* sock_data, struct socket *sock, int level, int optname, char __user *optval, unsigned int optlen, setsockopt_t orig_func);

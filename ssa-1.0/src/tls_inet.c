@@ -38,7 +38,7 @@ unsigned int tls_inet_poll(struct file *file, struct socket *sock, struct poll_t
 
 /* We don't need sendmsg, recvmsg, poll, etc here because we're using the native socket functions */
 
-int set_tls_protos(struct proto* tls_prot, struct proto_ops* tls_proto_ops) {
+int init_tls_protos(struct proto* tls_prot, struct proto_ops* tls_proto_ops) {
 	/* We share operations with TCP for transport to daemon */
 	*tls_prot = tcp_prot;
 	ref_tcp_prot = tcp_prot;
@@ -119,7 +119,7 @@ int tls_inet_init_sock(struct sock *sk) {
 
     comm_ptr = get_full_comm(comm, NAME_MAX);
 
-    ret = send_socket_notification(sock_data->key, comm_ptr, sock_data->daemon_id);
+    ret = send_socket_notification(sock_data->key, AF_INET, sock_data->daemon_id);
     if (ret != 0)
         goto err;
 
