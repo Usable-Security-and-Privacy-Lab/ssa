@@ -44,14 +44,13 @@
 #define DRIVER_AUTHOR 	"Mark O'Neill <mark@markoneill.name> and Nick Bonner <j.nick.bonner@gmail.com>"
 #define DRIVER_DESC	"A loadable TLS module to give TLS functionality to the POSIX socket API"
 
-#define INET_MODE	0
-#define UNIX_MODE	1
 
 MODULE_LICENSE("GPL");
 MODULE_AUTHOR(DRIVER_AUTHOR);
 MODULE_DESCRIPTION(DRIVER_DESC);
 
-/* The TLS protocol structures to be filled and registered */
+
+/* The IPv4 TLS protocol structures to be filled and registered */
 static struct proto tls_prot;
 static struct proto_ops tls_proto_ops;
 static struct net_protocol tls_protocol;
@@ -64,10 +63,24 @@ static struct inet_protosw tls_stream_protosw = {
 };
 
 
+/* The IPv6 TLS protocol structures to be filled and registered */
+/*
+static struct proto tlsv6_prot;
+static struct proto_ops tlsv6_proto_ops;
+static struct inet6_protocol tlsv6_protocol;
+static struct inet_protosw tlsv6_stream_protosw = {
+    .type       = SOCK_STREAM,
+    .protocol   = IPPROTO_TLS,
+    .prot       = &tlsv6_prot,
+    .ops        = &tlsv6_proto_ops,
+    .flags      = INET_PROTOSW_ICSK
+};
+ */ 
+
 static int __init ssa_init(void) {
-	int err;
-	unsigned long kallsyms_err;
-	static const struct net_protocol *tcp_protocol_lookup;
+
+    unsigned long ipv4_protocol_ptr;
+    int ret;
 
 	printk(KERN_INFO "Initializing Secure Socket API module\n");
 	printk(KERN_INFO "Found %u CPUs\n", nr_cpu_ids);
@@ -76,18 +89,20 @@ static int __init ssa_init(void) {
 	tls_setup();
 
 	/* Obtain referencess to desired TLS handling functions */
-	err = set_tls_prot_inet_stream(&tls_prot, &tls_proto_ops);
-	if (err != 0)
-		goto out;
+	ret = set_tls_protos(&tls_prot, &tls_proto_ops);
+	if (ret != 0)
+		goto err;
+
+    
 
 	/* Initialize the TLS protocol */
 	/* XXX Do we really NOT want to allocate cache space here? Why is 2nd param 0? */
-	err = proto_register(&tls_prot, 0);
-	if (err == 0) {
+	ret = proto_register(&tls_prot, 0);
+	if (ret == 0) {
 		printk(KERN_INFO "TLS protocol registration was successful\n");
 	} else {
 		printk(KERN_ALERT "TLS Protocol registration failed\n");
-		goto out;
+		goto err;
 	}
 
 	/*
@@ -95,8 +110,8 @@ static int __init ssa_init(void) {
 	 * and verify that it was found. If it fails, unregister the protocol
 	 * and exit the module initialization.
 	 */
-	kallsyms_err = kallsyms_lookup_name("tcp_protocol");
-	if (kallsyms_err == 0) {
+	ipv4_protocol_ptr = kallsyms_lookup_name("tcp_protocol");
+	if (ipv4_protocol_ptr == 0) {
 		printk(KERN_ALERT "kallsyms_lookup_name failed to retrieve tcp_protocol address\n");
 		goto out_proto_unregister;
 	}
@@ -104,10 +119,10 @@ static int __init ssa_init(void) {
 	/* Create a copy of the tcp_protocol net_protocol and register it with IPPROTO_TLS.
 	   We borrow these operations because they suit our needs. Modify them later if
 	   necessary through our local copy. */
-	tcp_protocol_lookup = (struct net_protocol*)kallsyms_err;
-	tls_protocol = *tcp_protocol_lookup;
-	err = inet_add_protocol(&tls_protocol, IPPROTO_TLS);
-	if (err == 0) {
+	tls_protocol = *((struct net_protocol*) ipv4_protocol_ptr);
+	 
+	ret = inet_add_protocol(&tls_protocol, IPPROTO_TLS);
+	if (ret == 0) {
 		printk(KERN_INFO "Protocol insertion in inet_protos[] was successful\n");
 	} else {
 		printk(KERN_ALERT "Protocol insertion in inet_protos[] failed\n");
@@ -115,15 +130,18 @@ static int __init ssa_init(void) {
 	}
 	inet_register_protosw(&tls_stream_protosw);
 
-	printk(KERN_INFO "Initialized Secure Socket API module successfully\n");
-	return 0;
+    printk(KERN_INFO "Initialized Secure Socket API module successfully\n");
+    return 0;
 
-out:
-	return err;
+
 out_proto_unregister:
-	proto_unregister(&tls_prot);
-	goto out;
+    proto_unregister(&tls_prot);
+
+err:
+    return ret;
 }
+
+
 
 static void __exit ssa_exit(void) {
 
