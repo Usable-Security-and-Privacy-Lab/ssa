@@ -13,23 +13,23 @@
 typedef struct tls_sock_data {
 
     struct socket* associated_socket;
-	unsigned long key;
+    unsigned long key;
     struct hlist_node hash;
-	struct sockaddr_storage ext_addr;
-	int ext_addrlen;
-	struct sockaddr_storage int_addr;
-	int int_addrlen;
-	struct sockaddr_storage rem_addr;
-	int rem_addrlen;
-	int is_bound;
-	int is_error;
-	int async_connect;
-	int interrupted; 
-	struct completion sock_event;
-	int response;
-	char* rdata; /* returned data from asynchronous callback */
-	unsigned int rdata_len; /* length of data returned from async callback */
-	int daemon_id; /* userspace daemon to which the socket is assigned */
+    struct sockaddr_storage ext_addr;
+    int ext_addrlen;
+    struct sockaddr_storage int_addr;
+    int int_addrlen;
+    struct sockaddr_storage rem_addr;
+    int rem_addrlen;
+    int is_bound;
+    int is_error;
+    int async_connect;
+    int interrupted; 
+    struct completion sock_event;
+    int response;
+    char* rdata; /* returned data from asynchronous callback */
+    unsigned int rdata_len; /* length of data returned from async callback */
+    int daemon_id; /* userspace daemon to which the socket is assigned */
 } tls_sock_data_t;
 
 

@@ -31,47 +31,47 @@ int tls_inet_release(struct socket* sock);
 
 void tls_protos_init(struct proto* tls_prot, struct proto_ops* tls_proto_ops)
 {
-	/* We share operations with TCP for transport to daemon */
-	*tls_prot = tcp_prot;
-	ref_tcp_prot = tcp_prot;
+    /* We share operations with TCP for transport to daemon */
+    *tls_prot = tcp_prot;
+    ref_tcp_prot = tcp_prot;
 
-	/* Guessing what the TLS-unique things should be here */
-	strcpy(tls_prot->name, "TLS");
-	tls_prot->owner = THIS_MODULE;
-	tls_prot->inuse_idx = 0;
-	tls_prot->memory_allocated = &tls_memory_allocated;
-	tls_prot->orphan_count = &tls_orphan_count;
-	tls_prot->sockets_allocated = &tls_sockets_allocated;
-	percpu_counter_init(&tls_orphan_count, 0, GFP_KERNEL);
-	percpu_counter_init(&tls_sockets_allocated, 0, GFP_KERNEL);
+    /* Guessing what the TLS-unique things should be here */
+    strcpy(tls_prot->name, "TLS");
+    tls_prot->owner = THIS_MODULE;
+    tls_prot->inuse_idx = 0;
+    tls_prot->memory_allocated = &tls_memory_allocated;
+    tls_prot->orphan_count = &tls_orphan_count;
+    tls_prot->sockets_allocated = &tls_sockets_allocated;
+    percpu_counter_init(&tls_orphan_count, 0, GFP_KERNEL);
+    percpu_counter_init(&tls_sockets_allocated, 0, GFP_KERNEL);
 
-	/* Keep all tcp_prot functions except the following */
-	tls_prot->init = tls_inet_init_sock;
+    /* Keep all tcp_prot functions except the following */
+    tls_prot->init = tls_inet_init_sock;
 
-	*tls_proto_ops = inet_stream_ops;
-	ref_inet_stream_ops = inet_stream_ops;
-	
-	tls_proto_ops->owner = THIS_MODULE;
+    *tls_proto_ops = inet_stream_ops;
+    ref_inet_stream_ops = inet_stream_ops;
+    
+    tls_proto_ops->owner = THIS_MODULE;
 
-	/* Keep all inet_stream_ops except the following */
-	tls_proto_ops->release = tls_inet_release;
-	tls_proto_ops->bind = tls_bind;
-	tls_proto_ops->connect = tls_connect;
-	tls_proto_ops->listen = tls_listen;
-	tls_proto_ops->accept = tls_accept;
-	tls_proto_ops->setsockopt = tls_setsockopt;
-	tls_proto_ops->getsockopt = tls_getsockopt;
+    /* Keep all inet_stream_ops except the following */
+    tls_proto_ops->release = tls_inet_release;
+    tls_proto_ops->bind = tls_bind;
+    tls_proto_ops->connect = tls_connect;
+    tls_proto_ops->listen = tls_listen;
+    tls_proto_ops->accept = tls_accept;
+    tls_proto_ops->setsockopt = tls_setsockopt;
+    tls_proto_ops->getsockopt = tls_getsockopt;
     tls_proto_ops->poll = tls_poll;
 
-	return;
+    return;
 }
 
 
 void tls_protos_cleanup(void)
 {
-	percpu_counter_destroy(&tls_orphan_count);
-	percpu_counter_destroy(&tls_sockets_allocated);
-	return;
+    percpu_counter_destroy(&tls_orphan_count);
+    percpu_counter_destroy(&tls_sockets_allocated);
+    return;
 }
 
 

@@ -38,18 +38,18 @@ int tlsv6_protos_init(struct proto* prot, struct proto_ops* proto_ops)
     ref_tcpv6_prot = *tcpv6_prot_ptr;
     *prot = *tcpv6_prot_ptr;
 
-	/* Guessing what the TLS-unique things should be here */
-	strcpy(prot->name, "TLS");
-	prot->owner = THIS_MODULE;
-	prot->inuse_idx = 0;
-	prot->memory_allocated = &tlsv6_memory_allocated;
-	prot->orphan_count = &tlsv6_orphan_count;
-	prot->sockets_allocated = &tlsv6_sockets_allocated;
-	percpu_counter_init(&tlsv6_orphan_count, 0, GFP_KERNEL);
-	percpu_counter_init(&tlsv6_sockets_allocated, 0, GFP_KERNEL);
+    /* Guessing what the TLS-unique things should be here */
+    strcpy(prot->name, "TLS");
+    prot->owner = THIS_MODULE;
+    prot->inuse_idx = 0;
+    prot->memory_allocated = &tlsv6_memory_allocated;
+    prot->orphan_count = &tlsv6_orphan_count;
+    prot->sockets_allocated = &tlsv6_sockets_allocated;
+    percpu_counter_init(&tlsv6_orphan_count, 0, GFP_KERNEL);
+    percpu_counter_init(&tlsv6_sockets_allocated, 0, GFP_KERNEL);
 
-	/* Keep all tcp_prot functions except the following */
-	prot->init = tls_inet6_init_sock;
+    /* Keep all tcp_prot functions except the following */
+    prot->init = tls_inet6_init_sock;
 
 
     inet6_ops_ptr = (struct proto_ops*) kallsyms_lookup_name("inet6_stream_ops");
@@ -58,33 +58,33 @@ int tlsv6_protos_init(struct proto* prot, struct proto_ops* proto_ops)
         return -1;
     }
 
-	ref_inet6_stream_ops = *inet6_ops_ptr;
-	*proto_ops = *inet6_ops_ptr;
+    ref_inet6_stream_ops = *inet6_ops_ptr;
+    *proto_ops = *inet6_ops_ptr;
 
-	
-	proto_ops->owner = THIS_MODULE;
-
-	/* Keep all inet_stream_ops except the following */
     
-	proto_ops->release = tls_inet6_release;
-	proto_ops->bind = tls_bind;
-	proto_ops->connect = tls_connect;
-	proto_ops->listen = tls_listen;
-	proto_ops->accept = tls_accept;
-	proto_ops->setsockopt = tls_setsockopt;
-	proto_ops->getsockopt = tls_getsockopt;
+    proto_ops->owner = THIS_MODULE;
+
+    /* Keep all inet_stream_ops except the following */
+    
+    proto_ops->release = tls_inet6_release;
+    proto_ops->bind = tls_bind;
+    proto_ops->connect = tls_connect;
+    proto_ops->listen = tls_listen;
+    proto_ops->accept = tls_accept;
+    proto_ops->setsockopt = tls_setsockopt;
+    proto_ops->getsockopt = tls_getsockopt;
     proto_ops->poll = tls_poll;
     
 
-	return 0;
+    return 0;
 }
 
 
 void tlsv6_protos_cleanup(void)
 {
-	percpu_counter_destroy(&tlsv6_orphan_count);
-	percpu_counter_destroy(&tlsv6_sockets_allocated);
-	return;
+    percpu_counter_destroy(&tlsv6_orphan_count);
+    percpu_counter_destroy(&tlsv6_sockets_allocated);
+    return;
 }
 
 

@@ -68,7 +68,7 @@ int tls_common_init_sock(struct sock *sk, sa_family_t family)
     init_completion(&sock_data->sock_event);
 
     if (family == AF_INET)
-	    ret = ref_tcp_prot.init(sk);
+        ret = ref_tcp_prot.init(sk);
     else 
         ret = ref_tcpv6_prot.init(sk);
 
@@ -117,22 +117,22 @@ int tls_bind(struct socket *sock, struct sockaddr *addr, int addrlen)
      * so that we can have the TLS wrapper daemon bind to the actual one */
 
     ret = tcp_ops.bind(sock, (struct sockaddr*) &sock_data->int_addr, sock_data->int_addrlen);
-	/* We only want to continue if the internal socket bind succeeds */
-	if (ret != 0) {
-		printk(KERN_ALERT "Internal bind failed\n");
-		return ret;
-	}
+    /* We only want to continue if the internal socket bind succeeds */
+    if (ret != 0) {
+        printk(KERN_ALERT "Internal bind failed\n");
+        return ret;
+    }
 
-	/* We can use the port number now because inet_bind will have set
-	 * it for us */
+    /* We can use the port number now because inet_bind will have set
+     * it for us */
     set_port(&sock_data->int_addr, inet_sk(sock->sk)->inet_sport);
 
 
     send_bind_notification(sock_id, (struct sockaddr*) &sock_data->int_addr, sock_data->int_addrlen,
-			    addr, addrlen, sock_data->daemon_id);
-	if (wait_for_completion_timeout(&sock_data->sock_event, RESPONSE_TIMEOUT) == 0) {
-		/* Let's lie to the application if the daemon isn't responding */
-		return -EADDRINUSE;
+                addr, addrlen, sock_data->daemon_id);
+    if (wait_for_completion_timeout(&sock_data->sock_event, RESPONSE_TIMEOUT) == 0) {
+        /* Let's lie to the application if the daemon isn't responding */
+        return -EADDRINUSE;
     }
 
     if (sock_data->response != 0)
@@ -162,87 +162,87 @@ int tls_connect(struct socket *sock, struct sockaddr *rem_addr, int rem_addrlen,
     int ret, blocking;
 
     /* Save original destination address information */
-	sock_data->rem_addr = *((struct sockaddr_storage*) rem_addr);
-	sock_data->rem_addrlen = rem_addrlen;
+    sock_data->rem_addr = *((struct sockaddr_storage*) rem_addr);
+    sock_data->rem_addrlen = rem_addrlen;
 
-	/* Pre-emptively bind the source port so we can register it before remote
-	 * connection. We only do this if the application hasn't explicitly called
-	 * bind already */
-	if (sock_data->is_bound == 0) {
-		tcp_ops.bind(sock, (struct sockaddr*) &int_addr, int_addrlen);
+    /* Pre-emptively bind the source port so we can register it before remote
+     * connection. We only do this if the application hasn't explicitly called
+     * bind already */
+    if (sock_data->is_bound == 0) {
+        tcp_ops.bind(sock, (struct sockaddr*) &int_addr, int_addrlen);
 
         set_port(&int_addr, inet_sk(sock->sk)->inet_sport);
 
-		memcpy(&sock_data->int_addr, &int_addr, int_addrlen);
-		sock_data->int_addrlen = int_addrlen;
+        memcpy(&sock_data->int_addr, &int_addr, int_addrlen);
+        sock_data->int_addrlen = int_addrlen;
 
-		sock_data->is_bound = 1;
-	}
+        sock_data->is_bound = 1;
+    }
 
-	blocking = !(flags & O_NONBLOCK);
+    blocking = !(flags & O_NONBLOCK);
 
-	/* If we've been interrupted (in a previous call to connect)
-	 * then we're currently being called again and shouldn't
-	 * double send connect notifies or wait */
-	if (sock_data->interrupted == 1) {
+    /* If we've been interrupted (in a previous call to connect)
+     * then we're currently being called again and shouldn't
+     * double send connect notifies or wait */
+    if (sock_data->interrupted == 1) {
         set_port(&reroute_addr, htons(sock_data->daemon_id));
 
-		ret = tcp_ops.connect(sock, (struct sockaddr*) &reroute_addr, reroute_addrlen, flags);
-		if (ret != 0) {
-			if (ret == -ERESTARTSYS) /* Interrupted by signal, transparently restart */
-				sock_data->interrupted = 1;
-			else
-				sock_data->interrupted = 0;
-		}
+        ret = tcp_ops.connect(sock, (struct sockaddr*) &reroute_addr, reroute_addrlen, flags);
+        if (ret != 0) {
+            if (ret == -ERESTARTSYS) /* Interrupted by signal, transparently restart */
+                sock_data->interrupted = 1;
+            else
+                sock_data->interrupted = 0;
+        }
 
-		return ret;
-	}
+        return ret;
+    }
 
-	/* Connect notifications and waiting should only happen the first time for
-	 * any connection attempt */
+    /* Connect notifications and waiting should only happen the first time for
+     * any connection attempt */
 
-	if (blocking == 0) {
-		sock_data->async_connect = 1;
+    if (blocking == 0) {
+        sock_data->async_connect = 1;
 
-		send_connect_notification(sock_id, (struct sockaddr*) &sock_data->int_addr, sock_data->int_addrlen, 
+        send_connect_notification(sock_id, (struct sockaddr*) &sock_data->int_addr, sock_data->int_addrlen, 
                 rem_addr, rem_addrlen, blocking, sock_data->daemon_id);
-		printk(KERN_ALERT "nonblocking wait going\n");
-		if (wait_for_completion_timeout(&sock_data->sock_event, RESPONSE_TIMEOUT) == 0) {
-			return -EHOSTUNREACH;
-		}
+        printk(KERN_ALERT "nonblocking wait going\n");
+        if (wait_for_completion_timeout(&sock_data->sock_event, RESPONSE_TIMEOUT) == 0) {
+            return -EHOSTUNREACH;
+        }
 
         /* here we do a cheeky snipe on the socket state to make poll think it's connecting */
         printk(KERN_INFO "sk_state: %i\n", sock->sk->sk_state);
         
-		if (sock_data->response != 0) {
-			sock->sk->sk_err = -sock_data->response; /* TODO: do this everywhere? */
+        if (sock_data->response != 0) {
+            sock->sk->sk_err = -sock_data->response; /* TODO: do this everywhere? */
             
-			return sock_data->response;
-		}
+            return sock_data->response;
+        }
 
-		return 0;
-	}
+        return 0;
+    }
 
-	/* Blocking case */
-	send_connect_notification(sock_id, (struct sockaddr*) &sock_data->int_addr, sock_data->int_addrlen, 
+    /* Blocking case */
+    send_connect_notification(sock_id, (struct sockaddr*) &sock_data->int_addr, sock_data->int_addrlen, 
                 rem_addr, rem_addrlen, blocking, sock_data->daemon_id);
-	if (wait_for_completion_timeout(&sock_data->sock_event, HANDSHAKE_TIMEOUT) == 0)
-		return -EHOSTUNREACH;
+    if (wait_for_completion_timeout(&sock_data->sock_event, HANDSHAKE_TIMEOUT) == 0)
+        return -EHOSTUNREACH;
 
-	if (sock_data->response != 0)
-		return sock_data->response;
+    if (sock_data->response != 0)
+        return sock_data->response;
 
     set_port(&reroute_addr, htons(sock_data->daemon_id));
 
-	ret = tcp_ops.connect(sock, ((struct sockaddr*) &reroute_addr), reroute_addrlen, flags);
-	if (ret != 0) {
-		if (ret == -ERESTARTSYS) { /* Interrupted by signal, transparently restart */
-			sock_data->interrupted = 1;
-		}
-		return ret;
-	}
+    ret = tcp_ops.connect(sock, ((struct sockaddr*) &reroute_addr), reroute_addrlen, flags);
+    if (ret != 0) {
+        if (ret == -ERESTARTSYS) { /* Interrupted by signal, transparently restart */
+            sock_data->interrupted = 1;
+        }
+        return ret;
+    }
 
-	return 0;
+    return 0;
 
 }
 
@@ -263,8 +263,8 @@ void tls_trigger_connect(struct socket* sock, int daemon_id)
     printk(KERN_INFO "async connect sk->state: %i\n", sock->sk->sk_state);
     printk(KERN_INFO "async connect sk->err: %i\n", sock->sk->sk_err);
 
-	printk(KERN_ALERT "Async connect done\n");
-	return;
+    printk(KERN_ALERT "Async connect done\n");
+    return;
 }
 
 
@@ -276,7 +276,7 @@ int tls_setsockopt(struct socket *sock, int level, int optname, char __user *opt
     struct proto_ops tcp_ops = get_proto_ops(sock->sk);
     int timeout_val = RESPONSE_TIMEOUT;
     int ret;
-	char* koptval;
+    char* koptval;
 
     if (optval == NULL || optlen == 0)
         return -EINVAL;
@@ -291,30 +291,30 @@ int tls_setsockopt(struct socket *sock, int level, int optname, char __user *opt
         return -EFAULT;
     }
 
-	switch (optname) {
-	case TLS_TRUSTED_PEER_CERTIFICATES:
-	case TLS_CERTIFICATE_CHAIN:
+    switch (optname) {
+    case TLS_TRUSTED_PEER_CERTIFICATES:
+    case TLS_CERTIFICATE_CHAIN:
     case TLS_PRIVATE_KEY:
 
-		/* We convert relative paths to absolute ones
-		 * here. We also skip things prefixed with '-'
-		 * because that denotes direct PEM encoding */
-		if (koptval[0] != '-' && koptval[0] != '/') {
-			koptval = get_absolute_path(koptval, &optlen);
-			if (koptval == NULL) {
-				return -ENOMEM;
-			}
-		}
-		ret = 0;
-		break;
-	case TLS_REQUEST_PEER_AUTH:
-		timeout_val = HZ*150;
-		ret = 0;
-		break;
-	default:
-		ret = 0;
-		break;
-	}
+        /* We convert relative paths to absolute ones
+         * here. We also skip things prefixed with '-'
+         * because that denotes direct PEM encoding */
+        if (koptval[0] != '-' && koptval[0] != '/') {
+            koptval = get_absolute_path(koptval, &optlen);
+            if (koptval == NULL) {
+                return -ENOMEM;
+            }
+        }
+        ret = 0;
+        break;
+    case TLS_REQUEST_PEER_AUTH:
+        timeout_val = HZ*150;
+        ret = 0;
+        break;
+    default:
+        ret = 0;
+        break;
+    }
 
     /* We return early if preliminary checks during our
      * kernel-side saving of sockopts failed. No sense
@@ -332,7 +332,7 @@ int tls_setsockopt(struct socket *sock, int level, int optname, char __user *opt
     if (sock_data->response != 0)
         return sock_data->response;
 
-	/* We only get here if the daemonside setsockopt succeeded */
+    /* We only get here if the daemonside setsockopt succeeded */
     if (level != IPPROTO_TLS) {
         /* Now we do the same thing to the application socket, if applicable */
         return tcp_ops.setsockopt(sock, level, optname, optval, optlen);
@@ -359,37 +359,37 @@ int tls_getsockopt(struct socket *sock, int level, int optname, char __user *opt
     switch (optname) {
     case TLS_ID:
         return get_id(sock_data, optval, optlen);
-	
+    
     default:
-		send_getsockopt_notification(sock_data->key, level, optname, sock_data->daemon_id);
-		if (wait_for_completion_timeout(&sock_data->sock_event, RESPONSE_TIMEOUT) == 0) {
-			/* Let's lie to the application if the daemon isn't responding */
-			return -ENOBUFS;
-		}
-		if (sock_data->response != 0) {
-			return sock_data->response;
-		}
-		/* We set this to the minimum of actual data length and size
-		 * of user's buffer rather than aborting if the user one is
-		 * smaller because POSIX says to silently truncate in this
-		 * case */
-		len = min_t(unsigned int, len, sock_data->rdata_len);
-		if (unlikely(put_user(len, optlen))) {
-			kfree(sock_data->rdata);
-			sock_data->rdata = NULL;
-			sock_data->rdata_len = 0;
-			return -EFAULT;
-		}
-		if (copy_to_user(optval, sock_data->rdata, len)) {
-			kfree(sock_data->rdata);
-			sock_data->rdata = NULL;
-			sock_data->rdata_len = 0;
-			return -EFAULT;
-		}
-		break;
-	}
+        send_getsockopt_notification(sock_data->key, level, optname, sock_data->daemon_id);
+        if (wait_for_completion_timeout(&sock_data->sock_event, RESPONSE_TIMEOUT) == 0) {
+            /* Let's lie to the application if the daemon isn't responding */
+            return -ENOBUFS;
+        }
+        if (sock_data->response != 0) {
+            return sock_data->response;
+        }
+        /* We set this to the minimum of actual data length and size
+         * of user's buffer rather than aborting if the user one is
+         * smaller because POSIX says to silently truncate in this
+         * case */
+        len = min_t(unsigned int, len, sock_data->rdata_len);
+        if (unlikely(put_user(len, optlen))) {
+            kfree(sock_data->rdata);
+            sock_data->rdata = NULL;
+            sock_data->rdata_len = 0;
+            return -EFAULT;
+        }
+        if (copy_to_user(optval, sock_data->rdata, len)) {
+            kfree(sock_data->rdata);
+            sock_data->rdata = NULL;
+            sock_data->rdata_len = 0;
+            return -EFAULT;
+        }
+        break;
+    }
 
-	return 0;
+    return 0;
 
 }
 
@@ -402,32 +402,32 @@ int tls_getsockopt(struct socket *sock, int level, int optname, char __user *opt
     int int_addrlen = get_loopback_addrlen(sock->sk->sk_family);
 
     unsigned long sock_id = get_sock_id(sock);
-	tls_sock_data_t* sock_data = get_tls_sock_data(sock_id);
+    tls_sock_data_t* sock_data = get_tls_sock_data(sock_id);
 
     printk(KERN_INFO "listen af_family: %s", (sock->sk->sk_family == AF_INET) ? "AF_INET" : "AF_INET6");
 
-	if (sock_data->is_bound == 0) {
-		tcp_ops.bind(sock, (struct sockaddr*) &int_addr, int_addrlen);
+    if (sock_data->is_bound == 0) {
+        tcp_ops.bind(sock, (struct sockaddr*) &int_addr, int_addrlen);
 
         set_port(&int_addr, inet_sk(sock->sk)->inet_sport);
-		memcpy(&sock_data->int_addr, &int_addr, int_addrlen);
-		sock_data->int_addrlen = int_addrlen;
+        memcpy(&sock_data->int_addr, &int_addr, int_addrlen);
+        sock_data->int_addrlen = int_addrlen;
 
-		sock_data->is_bound = 1;
-	}
+        sock_data->is_bound = 1;
+    }
 
-	send_listen_notification(sock_id, 
+    send_listen_notification(sock_id, 
                 (struct sockaddr*) &sock_data->int_addr, sock_data->int_addrlen,
                 (struct sockaddr*) &sock_data->ext_addr, sock_data->ext_addrlen,
                 sock_data->daemon_id);
 
-	if (wait_for_completion_timeout(&sock_data->sock_event, RESPONSE_TIMEOUT) == 0) {
-		/* Let's lie to the application if the daemon isn't responding */
-		return -EADDRINUSE;
-	}
+    if (wait_for_completion_timeout(&sock_data->sock_event, RESPONSE_TIMEOUT) == 0) {
+        /* Let's lie to the application if the daemon isn't responding */
+        return -EADDRINUSE;
+    }
 
-	if (sock_data->response != 0) 
-		return sock_data->response;
+    if (sock_data->response != 0) 
+        return sock_data->response;
 
     return tcp_ops.listen(sock, backlog);
 }
@@ -463,24 +463,24 @@ int tls_accept(struct socket *sock, struct socket *newsock, int flags, bool kern
         return -ENOMEM;
     }
 
-	memset(sock_data, 0, sizeof(tls_sock_data_t));
+    memset(sock_data, 0, sizeof(tls_sock_data_t));
 
-	sock_data->daemon_id = listen_sock_data->daemon_id;
-	sock_data->key = get_sock_id(newsock);
-	init_completion(&sock_data->sock_event);
-	put_tls_sock_data(sock_data->key, &sock_data->hash);
+    sock_data->daemon_id = listen_sock_data->daemon_id;
+    sock_data->key = get_sock_id(newsock);
+    init_completion(&sock_data->sock_event);
+    put_tls_sock_data(sock_data->key, &sock_data->hash);
 
     sock_data->int_addr = get_loopback_address(sock->sk->sk_family);
     sock_data->int_addrlen = get_loopback_addrlen(sock->sk->sk_family);
     set_port(&sock_data->int_addr, inet_sk(newsock->sk)->inet_dport);
 
-	send_accept_notification(sock_data->key, (struct sockaddr*) &sock_data->int_addr, sock_data->int_addrlen, sock_data->daemon_id);
-	if (wait_for_completion_interruptible(&sock_data->sock_event) != 0)
-		return -EINTR;
+    send_accept_notification(sock_data->key, (struct sockaddr*) &sock_data->int_addr, sock_data->int_addrlen, sock_data->daemon_id);
+    if (wait_for_completion_interruptible(&sock_data->sock_event) != 0)
+        return -EINTR;
 
     printk(KERN_INFO "made it to end of accept()");
 
-	return sock_data->response;
+    return sock_data->response;
 }
 
 
@@ -510,56 +510,56 @@ unsigned int tls_poll(struct file *file, struct socket *sock, struct poll_table_
 
 int get_id(tls_sock_data_t* sock_data, char __user *optval, int* __user optlen)
 {
-	int len;
-	if (get_user(len, optlen)) {
-		return -EFAULT;
-	}
-	len = min_t(unsigned int, len, sizeof(unsigned long));
-	if (put_user(len, optlen)) {
-		return -EFAULT;
-	}
-	if (copy_to_user(optval, &sock_data->key, len)) {
-		return -EFAULT;
-	}
-	return 0;
+    int len;
+    if (get_user(len, optlen)) {
+        return -EFAULT;
+    }
+    len = min_t(unsigned int, len, sizeof(unsigned long));
+    if (put_user(len, optlen)) {
+        return -EFAULT;
+    }
+    if (copy_to_user(optval, &sock_data->key, len)) {
+        return -EFAULT;
+    }
+    return 0;
 }
 
 
 char* kgetcwd(char* buffer, int buflen)
 {
-	char* path_ptr;
-	struct path pwd;
-	get_fs_pwd(current->fs, &pwd);
+    char* path_ptr;
+    struct path pwd;
+    get_fs_pwd(current->fs, &pwd);
 
-	path_ptr = d_path(&pwd, buffer, buflen);
-	return path_ptr;
+    path_ptr = d_path(&pwd, buffer, buflen);
+    return path_ptr;
 }
 
 char* get_absolute_path(char* rpath, int* rpath_len)
 {
-	char* apath;
-	char* bpath;
-	int bpath_len;
-	char tmp[NAME_MAX];
-	apath = kmalloc(PATH_MAX, GFP_KERNEL);
-	if (apath == NULL) {
-		kfree(rpath);
-		return NULL;
-	}
+    char* apath;
+    char* bpath;
+    int bpath_len;
+    char tmp[NAME_MAX];
+    apath = kmalloc(PATH_MAX, GFP_KERNEL);
+    if (apath == NULL) {
+        kfree(rpath);
+        return NULL;
+    }
 
-	bpath = kgetcwd(tmp, NAME_MAX);
-	bpath_len = strlen(bpath);
-	bpath[bpath_len] = '/';
-	bpath_len++;
-	if ((bpath_len + (*rpath_len)) >= PATH_MAX) {
-		kfree(rpath);
-		return NULL;
-	}
-	memcpy(apath, bpath, bpath_len);
-	memcpy(apath + bpath_len, rpath, *rpath_len);
-	kfree(rpath);
-	*rpath_len = strlen(apath)+1;
-	return apath;
+    bpath = kgetcwd(tmp, NAME_MAX);
+    bpath_len = strlen(bpath);
+    bpath[bpath_len] = '/';
+    bpath_len++;
+    if ((bpath_len + (*rpath_len)) >= PATH_MAX) {
+        kfree(rpath);
+        return NULL;
+    }
+    memcpy(apath, bpath, bpath_len);
+    memcpy(apath + bpath_len, rpath, *rpath_len);
+    kfree(rpath);
+    *rpath_len = strlen(apath)+1;
+    return apath;
 }
 
 
