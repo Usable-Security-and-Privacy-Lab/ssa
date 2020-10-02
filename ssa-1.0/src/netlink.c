@@ -31,17 +31,17 @@ static const struct nla_policy ssa_nl_policy[SSA_NL_A_MAX + 1] = {
 	},
 	[SSA_NL_A_SOCKADDR_INTERNAL] = {
 		.type = NLA_BINARY,
-		.len = sizeof(struct sockaddr),
+		.len = sizeof(struct sockaddr_storage),
 		.validation_type = NLA_VALIDATE_NONE,
 	},
 	[SSA_NL_A_SOCKADDR_EXTERNAL] = {
 		.type = NLA_BINARY,
-		.len = sizeof(struct sockaddr),
+		.len = sizeof(struct sockaddr_storage),
 		.validation_type = NLA_VALIDATE_NONE,
 	},
 	[SSA_NL_A_SOCKADDR_REMOTE] = {
 		.type = NLA_BINARY,
-		.len = sizeof(struct sockaddr),
+		.len = sizeof(struct sockaddr_storage),
 		.validation_type = NLA_VALIDATE_NONE,
 	},
 	[SSA_NL_A_OPTLEVEL] = {
@@ -277,11 +277,12 @@ void unregister_netlink() {
  * socket and assign it the given id.
  */
 int send_socket_notification(unsigned long id, unsigned short family, int port_id) {
-	struct sk_buff* skb;
-	int ret;
-	void* msg_head;
-	int msg_size = nla_total_size(sizeof(id)) + nla_total_size(sizeof(family));
 
+    int msg_size = nla_total_size(sizeof(id)) + nla_total_size(sizeof(family));
+    struct sk_buff* skb = NULL;
+    int ret;
+    void* msg_head;
+    
 	skb = genlmsg_new(msg_size, GFP_KERNEL);
 	if (skb == NULL) {
 		printk(KERN_ALERT "Failed in genlmsg_new [socket notify]\n");
@@ -427,12 +428,14 @@ int send_getsockopt_notification(unsigned long id, int level, int optname, int p
  * Forms and sends a netlink notification to the daemon to bind the socket
  * specified by id to a given address.
  */
-int send_bind_notification(unsigned long id, struct sockaddr* int_addr, struct sockaddr* ext_addr, int port_id) {
+int send_bind_notification(unsigned long id, struct sockaddr *int_addr, int int_addrlen, 
+            struct sockaddr *ext_addr, int ext_addrlen, int port_id)
+{
 	struct sk_buff* skb;
 	int ret;
 	void* msg_head;
-	int msg_size = nla_total_size(sizeof(id)) +
-			2 * nla_total_size(sizeof(struct sockaddr));
+	int msg_size = nla_total_size(sizeof(id)) + 
+            nla_total_size(int_addrlen) + nla_total_size(ext_addrlen);
 
 	skb = genlmsg_new(msg_size, GFP_KERNEL);
 	if (skb == NULL) {
@@ -451,13 +454,13 @@ int send_bind_notification(unsigned long id, struct sockaddr* int_addr, struct s
 		nlmsg_free(skb);
 		return -1;
 	}
-	ret = nla_put(skb, SSA_NL_A_SOCKADDR_INTERNAL, sizeof(struct sockaddr), int_addr);
+	ret = nla_put(skb, SSA_NL_A_SOCKADDR_INTERNAL, int_addrlen, int_addr);
 	if (ret != 0) {
 		printk(KERN_ALERT "Failed in nla_put (internal) [bind notify]\n");
 		nlmsg_free(skb);
 		return -1;
 	}
-	ret = nla_put(skb, SSA_NL_A_SOCKADDR_EXTERNAL, sizeof(struct sockaddr), ext_addr);
+	ret = nla_put(skb, SSA_NL_A_SOCKADDR_EXTERNAL, ext_addrlen, ext_addr);
 	if (ret != 0) {
 		printk(KERN_ALERT "Failed in nla_put (external) [bind notify]\n");
 		nlmsg_free(skb);
@@ -477,13 +480,16 @@ int send_bind_notification(unsigned long id, struct sockaddr* int_addr, struct s
  * Forms and sends a netlink notification to the daemon to connect the socket
  * specified by id to a given address.
  */
-int send_connect_notification(unsigned long id, struct sockaddr* int_addr, struct sockaddr* rem_addr, int blocking, int port_id) {
+int send_connect_notification(unsigned long id, struct sockaddr *int_addr, int int_addrlen, 
+            struct sockaddr *rem_addr, int rem_addrlen, int blocking, int port_id)
+{
 	struct sk_buff* skb;
 	int ret;
 	void* msg_head;
 	int msg_size = nla_total_size(sizeof(id)) +
-			nla_total_size(sizeof(int)) +
-			2 * nla_total_size(sizeof(struct sockaddr));
+            nla_total_size(int_addrlen) + 
+            nla_total_size(rem_addrlen) +
+			nla_total_size(sizeof(int));
 
 	skb = genlmsg_new(msg_size, GFP_KERNEL);
 	if (skb == NULL) {
@@ -502,13 +508,13 @@ int send_connect_notification(unsigned long id, struct sockaddr* int_addr, struc
 		nlmsg_free(skb);
 		return -1;
 	}
-	ret = nla_put(skb, SSA_NL_A_SOCKADDR_INTERNAL, sizeof(struct sockaddr), int_addr);
+	ret = nla_put(skb, SSA_NL_A_SOCKADDR_INTERNAL, int_addrlen, int_addr);
 	if (ret != 0) {
 		printk(KERN_ALERT "Failed in nla_put (internal) [connect notify]\n");
 		nlmsg_free(skb);
 		return -1;
 	}
-	ret = nla_put(skb, SSA_NL_A_SOCKADDR_REMOTE, sizeof(struct sockaddr), rem_addr);
+	ret = nla_put(skb, SSA_NL_A_SOCKADDR_REMOTE, rem_addrlen, rem_addr);
 	if (ret != 0) {
 		printk(KERN_ALERT "Failed in nla_put (remote) [connect notify]\n");
 		nlmsg_free(skb);
@@ -534,12 +540,15 @@ int send_connect_notification(unsigned long id, struct sockaddr* int_addr, struc
  * Forms and sends a netlink notification to the daemon to set the socket to
  * listen for incoming connections on its port and address.
  */
-int send_listen_notification(unsigned long id, struct sockaddr* int_addr, struct sockaddr* ext_addr, int port_id) {
-	struct sk_buff* skb;
-	int ret;
-	void* msg_head;
-	int msg_size = nla_total_size(sizeof(id)) +
-			2 * nla_total_size(sizeof(struct sockaddr));
+int send_listen_notification(unsigned long id, struct sockaddr *int_addr, int int_addrlen, 
+            struct sockaddr *ext_addr, int ext_addrlen, int port_id)
+{
+    struct sk_buff* skb;
+    int ret;
+    void* msg_head;
+    int msg_size = nla_total_size(sizeof(id)) +
+            nla_total_size(int_addrlen) + 
+            nla_total_size(ext_addrlen);
 
 	skb = genlmsg_new(msg_size, GFP_KERNEL);
 	if (skb == NULL) {
@@ -558,13 +567,13 @@ int send_listen_notification(unsigned long id, struct sockaddr* int_addr, struct
 		nlmsg_free(skb);
 		return -1;
 	}
-	ret = nla_put(skb, SSA_NL_A_SOCKADDR_INTERNAL, sizeof(struct sockaddr), int_addr);
+	ret = nla_put(skb, SSA_NL_A_SOCKADDR_INTERNAL, int_addrlen, int_addr);
 	if (ret != 0) {
 		printk(KERN_ALERT "Failed in nla_put (internal) [listen notify]\n");
 		nlmsg_free(skb);
 		return -1;
 	}
-	ret = nla_put(skb, SSA_NL_A_SOCKADDR_EXTERNAL, sizeof(struct sockaddr), ext_addr);
+	ret = nla_put(skb, SSA_NL_A_SOCKADDR_EXTERNAL, ext_addrlen, ext_addr);
 	if (ret != 0) {
 		printk(KERN_ALERT "Failed in nla_put (external) [listen notify]\n");
 		nlmsg_free(skb);
@@ -584,12 +593,13 @@ int send_listen_notification(unsigned long id, struct sockaddr* int_addr, struct
  * Forms and sends a netlink notification to the daemon to accept a new
  * connection on the listening socket specified by id.
  */
-int send_accept_notification(unsigned long id, struct sockaddr* int_addr, int port_id) {
+int send_accept_notification(unsigned long id, struct sockaddr *int_addr, int int_addrlen, int port_id)
+{
 	struct sk_buff* skb;
 	int ret;
 	void* msg_head;
 	int msg_size = nla_total_size(sizeof(id)) +
-			nla_total_size(sizeof(struct sockaddr)) +
+			nla_total_size(int_addrlen) +
 			nla_total_size(sizeof(int));
 
 	skb = genlmsg_new(msg_size, GFP_KERNEL);
@@ -609,7 +619,7 @@ int send_accept_notification(unsigned long id, struct sockaddr* int_addr, int po
 		nlmsg_free(skb);
 		return -1;
 	}
-	ret = nla_put(skb, SSA_NL_A_SOCKADDR_INTERNAL, sizeof(struct sockaddr), int_addr);
+	ret = nla_put(skb, SSA_NL_A_SOCKADDR_INTERNAL, int_addrlen, int_addr);
 	if (ret != 0) {
 		printk(KERN_ALERT "Failed in nla_put (internal) [accept notify]\n");
 		nlmsg_free(skb);

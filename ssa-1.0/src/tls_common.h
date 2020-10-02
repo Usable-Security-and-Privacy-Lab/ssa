@@ -40,15 +40,18 @@
 #define DAEMON_START_PORT	8443
 #define NUM_DAEMONS		1
 
-typedef int (*setsockopt_t)(struct socket *sock, int level, int optname, char __user *optval, unsigned int optlen);
-typedef int (*getsockopt_t)(struct socket *sock, int level, int optname, char __user *optval, int __user *optlen);
 
+int tls_common_init_sock(struct sock *sk, sa_family_t family);
 
-/* Socket functionality */
-int tls_common_setsockopt(tls_sock_data_t* sock_data, struct socket *sock, int level, int optname, char __user *optval, unsigned int optlen, setsockopt_t orig_func);
-int tls_common_getsockopt(tls_sock_data_t* sock_data, struct socket *sock, int level, int optname, char __user *optval, int __user *optlen, getsockopt_t orig_func);
+int tls_bind(struct socket *sock, struct sockaddr *uaddr, int addr_len);
+int tls_connect(struct socket *sock, struct sockaddr *uaddr, int addr_len, int flags);
+int tls_listen(struct socket *sock, int backlog);
+int tls_accept(struct socket *sock, struct socket *newsock, int flags, bool kern);
+int tls_setsockopt(struct socket *sock, int level, int optname, char __user *optval, unsigned int optlen);
+int tls_getsockopt(struct socket *sock, int level, int optname, char __user *optval, int __user *optlen);
+unsigned int tls_poll(struct file *file, struct socket *sock, struct poll_table_struct *wait);
 
-/* Misc */
-char* get_full_comm(char* buffer, int buflen);
+void tls_trigger_connect(struct socket* sock, int daemon_id);
+
 
 #endif /* TLS_COMMON_H */

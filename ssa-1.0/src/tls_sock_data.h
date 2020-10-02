@@ -14,12 +14,12 @@ typedef struct tls_sock_data {
 
     struct socket* associated_socket;
 	unsigned long key;
-        struct hlist_node hash;
-	struct sockaddr ext_addr;
+    struct hlist_node hash;
+	struct sockaddr_storage ext_addr;
 	int ext_addrlen;
-	struct sockaddr int_addr;
+	struct sockaddr_storage int_addr;
 	int int_addrlen;
-	struct sockaddr rem_addr;
+	struct sockaddr_storage rem_addr;
 	int rem_addrlen;
 	int is_bound;
 	int is_error;

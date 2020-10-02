@@ -1,7 +1,7 @@
 #include <linux/random.h>
 
 #include "netlink.h"
-#include "tls_inet.h"
+#include "tls_common.h"
 #include "tls_sock_data.h"
 
 
@@ -161,7 +161,7 @@ void report_handshake_finished(unsigned long key, int response) {
 	}
 	sock_data->response = response;
 	if (sock_data->async_connect == 1) {
-		inet_trigger_connect(sock_data->associated_socket, sock_data->daemon_id);
+		tls_trigger_connect(sock_data->associated_socket, sock_data->daemon_id);
         sock_data->async_connect = 0;
         
 	} else {

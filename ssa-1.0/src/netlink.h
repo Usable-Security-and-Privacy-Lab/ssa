@@ -52,10 +52,10 @@ int register_netlink(void);
 int send_socket_notification(unsigned long id, unsigned short family, int port_id);
 int send_setsockopt_notification(unsigned long id, int level, int optname, void* optval, int optlen, int port_id);
 int send_getsockopt_notification(unsigned long id, int level, int optname, int port_id);
-int send_bind_notification(unsigned long id, struct sockaddr* int_addr, struct sockaddr* ext_addr, int port_id);
-int send_connect_notification(unsigned long id, struct sockaddr* int_addr, struct sockaddr* rem_addr, int blocking, int port_id);
-int send_listen_notification(unsigned long id, struct sockaddr* int_addr, struct sockaddr* ext_addr, int port_id);
-int send_accept_notification(unsigned long id, struct sockaddr* int_addr, int port_id);
+int send_bind_notification(unsigned long id, struct sockaddr *int_addr, int int_addrlen, struct sockaddr *ext_addr, int ext_addrlen, int port_id);
+int send_connect_notification(unsigned long id, struct sockaddr *int_addr, int int_addrlen, struct sockaddr *rem_addr, int rem_addrlen, int blocking, int port_id);
+int send_listen_notification(unsigned long id, struct sockaddr *int_addr, int int_addrlen, struct sockaddr *ext_addr, int ext_addrlen, int port_id);
+int send_accept_notification(unsigned long id, struct sockaddr *int_addr, int int_addrlen, int port_id);
 int send_close_notification(unsigned long id, int port_id);
 void unregister_netlink(void);
 
