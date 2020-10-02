@@ -43,7 +43,7 @@
 #include "tls_inet6.h"
 #include "socktls.h"
 
-#define DRIVER_AUTHOR   "Mark O'Neill <mark@markoneill.name> and Nick Bonner <j.nick.bonner@gmail.com>"
+#define DRIVER_AUTHOR   "Mark O'Neill <mark@markoneill.name>, Nick Bonner <j.nick.bonner@gmail.com> and Nathaniel Bennett <bennettnate5@gmail.com>"
 #define DRIVER_DESC	    "A loadable TLS module to give TLS functionality to the POSIX socket API"
 
 
