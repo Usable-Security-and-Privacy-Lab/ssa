@@ -80,10 +80,10 @@ static struct inet_protosw tlsv6_stream_protosw = {
 };
 
 
-static int __init ssa_init(void) {
-
-    unsigned long ipv4_protocol_ptr, ipv6_protocol_ptr;
-    int ret;
+static int __init ssa_init(void)
+{
+    u64 ipv4_protocol_ptr, ipv6_protocol_ptr;
+    int err;
 
     printk(KERN_INFO "Initializing Secure Socket API module\n");
     printk(KERN_INFO "Found %u CPUs\n", nr_cpu_ids);
@@ -94,25 +94,23 @@ static int __init ssa_init(void) {
     /* Obtain referencess to desired TLS handling functions */
     tls_protos_init(&tls_prot, &tls_proto_ops);
     tlsv6_protos_init(&tlsv6_prot, &tlsv6_proto_ops);
-
     
 
     /* Initialize the TLS protocol */
-    /* XXX Do we really NOT want to allocate cache space here? Why is 2nd param 0? */
-    ret = proto_register(&tls_prot, 0);
-    if (ret == 0) {
-        printk(KERN_INFO "TLS protocol registration was successful\n");
-    } else {
-        printk(KERN_ALERT "TLS Protocol registration failed\n");
-        goto err;
+    /* XXX Do we really NOT want to allocate cache space here? 
+     * Why is 2nd param 0? 
+     */
+    err = proto_register(&tls_prot, 0);
+    if (err) {
+        printk(KERN_ALERT "TLS IPv4 protocol registration failed\n");
+        goto out;
     }
 
-    ret = proto_register(&tlsv6_prot, 0);
-    if (ret == 0) {
-        printk(KERN_INFO "TLS protocol registration was successful\n");
-    } else {
-        printk(KERN_ALERT "TLS Protocol registration failed\n");
-        goto err;
+    err = proto_register(&tlsv6_prot, 0);
+    if (err) {
+        printk(KERN_ALERT "TLS IPv6 protocol registration failed\n");
+        proto_unregister(&tls_prot);
+        goto out;
     }
 
     /*
@@ -122,13 +120,13 @@ static int __init ssa_init(void) {
      */
     ipv4_protocol_ptr = kallsyms_lookup_name("tcp_protocol");
     if (ipv4_protocol_ptr == 0) {
-        printk(KERN_ALERT "kallsyms_lookup_name failed to retrieve tcp_protocol address\n");
+        printk(KERN_ALERT "Reference TCP protocol could not be found\n");
         goto out_proto_unregister;
     }
 
     ipv6_protocol_ptr = kallsyms_lookup_name("tcpv6_protocol");
     if (ipv6_protocol_ptr == 0) {
-        printk(KERN_ALERT "kallsyms_lookup_name failed to retrieve tcp_protocol address\n");
+        printk(KERN_ALERT "Reference IPv6 TCP protocol could not be found\n");
         goto out_proto_unregister;
     }
 
@@ -138,44 +136,35 @@ static int __init ssa_init(void) {
     tls_protocol = *((struct net_protocol*) ipv4_protocol_ptr);
     tlsv6_protocol = *((struct inet6_protocol*) ipv6_protocol_ptr);
 
-    ret = inet_add_protocol(&tls_protocol, IPPROTO_TLS);
-    if (ret == 0) {
-        printk(KERN_INFO "Protocol insertion in inet_protos[] was successful\n");
-    } else {
-        printk(KERN_ALERT "Protocol insertion in inet_protos[] failed\n");
+    err = inet_add_protocol(&tls_protocol, IPPROTO_TLS);
+    if (err) {
+        printk(KERN_ALERT "TLS IPv4 protocol insertion failed\n");
         goto out_proto_unregister;
     }
 
-    ret = inet6_add_protocol(&tlsv6_protocol, IPPROTO_TLS);
-    if (ret == 0) {
-        printk(KERN_INFO "Protocol insertion in inet_protos[] was successful\n");
-    } else {
-        printk(KERN_ALERT "Protocol insertion in inet_protos[] failed\n");
+    err = inet6_add_protocol(&tlsv6_protocol, IPPROTO_TLS);
+    if (err) {
+        printk(KERN_ALERT "TLS IPv6 protocol insertion failed\n");
         goto out_proto_unregister;
     }
 
     inet_register_protosw(&tls_stream_protosw);
     inet6_register_protosw(&tlsv6_stream_protosw);
 
-    printk(KERN_INFO "Initialized Secure Socket API module successfully\n");
+    pr_info("Initialized Secure Socket API module successfully\n");
 
-
-    /* TODO: set up IPv6 here */
     return 0;
-
 
 out_proto_unregister:
     proto_unregister(&tls_prot);
     proto_unregister(&tlsv6_prot);
 
-err:
-    return ret;
+out:
+    return err;
 }
 
-
-
-static void __exit ssa_exit(void) {
-
+static void __exit ssa_exit(void)
+{
     tls_protos_cleanup();
     tlsv6_protos_cleanup();
 
@@ -199,7 +188,7 @@ static void __exit ssa_exit(void) {
     proto_unregister(&tlsv6_prot);
 
     printk(KERN_INFO "Secure Socket API module removed\n");
-    /* Free TLS socket handling data */
+
     tls_cleanup();
 }
 

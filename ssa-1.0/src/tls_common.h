@@ -51,7 +51,7 @@ int tls_setsockopt(struct socket *sock, int level, int optname, char __user *opt
 int tls_getsockopt(struct socket *sock, int level, int optname, char __user *optval, int __user *optlen);
 unsigned int tls_poll(struct file *file, struct socket *sock, struct poll_table_struct *wait);
 
-void tls_trigger_connect(struct socket* sock, int daemon_id);
+int tls_trigger_connect(struct socket *sock, int daemon_id);
 
 
 #endif /* TLS_COMMON_H */

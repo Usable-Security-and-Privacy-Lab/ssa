@@ -45,11 +45,13 @@ struct host_addr {
         unsigned char name[255];
 };
 
+/*
 struct sockaddr_host {
     sa_family_t sin_family;
     unsigned short sin_port;
     struct host_addr sin_addr;
 };
+ */
 
 
 #endif

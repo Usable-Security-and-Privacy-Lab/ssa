@@ -33,7 +33,7 @@ int main(int argc, char** argv) {
 	memset(&addr, 0, sizeof(addr));
 	addr.sin_family = AF_INET;
 	addr.sin_port = htons(PORT);
-	addr.sin_addr.s_addr = *((unsigned long*)server->h_addr);
+	addr.sin_addr.s_addr = *((u64*)server->h_addr);
 
 	con = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
 	if (con == -1) {

@@ -26,10 +26,10 @@ struct proto ref_tcp_prot;
 
 
 int tls_inet_init_sock(struct sock *sk);
-int tls_inet_release(struct socket* sock);
+int tls_inet_release(struct socket *sock);
 
 
-void tls_protos_init(struct proto* tls_prot, struct proto_ops* tls_proto_ops)
+void tls_protos_init(struct proto *tls_prot, struct proto_ops *tls_proto_ops)
 {
     /* We share operations with TCP for transport to daemon */
     *tls_prot = tcp_prot;
@@ -83,24 +83,17 @@ int tls_inet_init_sock(struct sock *sk)
 
 int tls_inet_release(struct socket* sock)
 {
-    unsigned long sock_id = get_sock_id(sock);
-    tls_sock_data_t* sock_data = get_tls_sock_data(sock_id);
+    u64 sock_id = get_sock_id(sock);
+    struct tls_sock_data *sock_data = get_tls_sock_data(sock_id);
     /* WARNING: DO NOT attempt to dereference sock->sk within this function */
-
-    printk(KERN_INFO "release called");
 
     if (sock_data != NULL) {
         send_close_notification(sock_id, sock_data->daemon_id);
-        //wait_for_completion_timeout(&sock_data->sock_event, RESPONSE_TIMEOUT);
-        printk(KERN_INFO "close notification sent...");
+        /* If this ^ fails, we ignore it and delete the socket anyways */
 
         rem_tls_sock_data(&sock_data->hash);
-        printk(KERN_INFO "removed socket data from hashmap...");
         kfree(sock_data);
-        printk(KERN_INFO "freed socket data...");
     }
-
-    printk(KERN_INFO "now calling tcp_ops.release()...");
 
     return ref_inet_stream_ops.release(sock);
 }
