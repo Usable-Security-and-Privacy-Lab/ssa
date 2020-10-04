@@ -299,10 +299,6 @@ int tls_setsockopt(struct socket *sock, int level, int optname,
 
         err = 0;
         break;
-    case TLS_REQUEST_PEER_AUTH:
-        timeout_val = HZ*150;
-        err = 0;
-        break;
     default:
         err = 0;
         break;
