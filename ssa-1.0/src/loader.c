@@ -43,7 +43,7 @@
 #include "tls_inet6.h"
 #include "socktls.h"
 
-#define DRIVER_AUTHOR   "Mark O'Neill <mark@markoneill.name>, Nick Bonner <j.nick.bonner@gmail.com> and Nathaniel Bennett <bennettnate5@gmail.com>"
+#define DRIVER_AUTHOR   "Mark O'Neill <mark@markoneill.name>, Nick Bonner <j.nick.bonner@gmail.com> and Nathaniel Bennett <me@nathanielbennett.com>"
 #define DRIVER_DESC	    "A loadable TLS module to give TLS functionality to the POSIX socket API"
 
 
@@ -145,7 +145,7 @@ static int __init ssa_init(void)
     err = inet6_add_protocol(&tlsv6_protocol, IPPROTO_TLS);
     if (err) {
         printk(KERN_ALERT "TLS IPv6 protocol insertion failed\n");
-        goto out_proto_unregister;
+        goto out_proto6_unregister;
     }
 
     inet_register_protosw(&tls_stream_protosw);
@@ -155,9 +155,11 @@ static int __init ssa_init(void)
 
     return 0;
 
+out_proto6_unregister:
+    proto_unregister(&tlsv6_prot);
+
 out_proto_unregister:
     proto_unregister(&tls_prot);
-    proto_unregister(&tlsv6_prot);
 
 out:
     return err;
